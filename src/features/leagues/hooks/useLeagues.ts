@@ -126,3 +126,76 @@ export function useDeleteLeague() {
     },
   });
 }
+
+/**
+ * Hook to change member role
+ */
+export function useChangeMemberRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ leagueId, userId, newRole }: { leagueId: string; userId: string; newRole: 'admin' | 'member' }) =>
+      LeagueService.changeMemberRole(leagueId, userId, newRole),
+    onSuccess: (_, { leagueId }) => {
+      // Invalidate league details to refresh member list
+      queryClient.invalidateQueries({ queryKey: leagueKeys.detail(leagueId) });
+    },
+    onError: (error) => {
+      console.error('Failed to change member role:', error);
+    },
+  });
+}
+
+/**
+ * Hook to remove member from league
+ */
+export function useRemoveMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ leagueId, userId }: { leagueId: string; userId: string }) =>
+      LeagueService.removeMember(leagueId, userId),
+    onSuccess: (_, { leagueId }) => {
+      // Invalidate league details to refresh member list
+      queryClient.invalidateQueries({ queryKey: leagueKeys.detail(leagueId) });
+      
+      // Invalidate standings
+      queryClient.invalidateQueries({ queryKey: leagueKeys.standing(leagueId) });
+    },
+    onError: (error) => {
+      console.error('Failed to remove member:', error);
+    },
+  });
+}
+
+/**
+ * Hook to transfer league ownership
+ */
+export function useTransferOwnership() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ leagueId, newOwnerId }: { leagueId: string; newOwnerId: string }) =>
+      LeagueService.transferOwnership(leagueId, newOwnerId),
+    onSuccess: (_, { leagueId }) => {
+      // Invalidate all league-related data
+      queryClient.invalidateQueries({ queryKey: leagueKeys.detail(leagueId) });
+      queryClient.invalidateQueries({ queryKey: leagueKeys.lists() });
+    },
+    onError: (error) => {
+      console.error('Failed to transfer ownership:', error);
+    },
+  });
+}
+
+/**
+ * Hook to get league statistics
+ */
+export function useLeagueStats(leagueId: string) {
+  return useQuery({
+    queryKey: [...leagueKeys.detail(leagueId), 'stats'],
+    queryFn: () => LeagueService.getLeagueStats(leagueId),
+    enabled: !!leagueId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}

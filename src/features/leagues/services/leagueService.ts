@@ -254,6 +254,199 @@ export class LeagueService {
   }
 
   /**
+   * Change member role (admin/creator only)
+   */
+  static async changeMemberRole(leagueId: string, userId: string, newRole: 'admin' | 'member'): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Verify current user has permission to change roles
+    const { data: currentUserMember } = await supabase
+      .from('league_members')
+      .select('role')
+      .eq('league_id', leagueId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (!currentUserMember || !['creator', 'admin'].includes(currentUserMember.role)) {
+      throw new Error('You do not have permission to change member roles');
+    }
+
+    // Creators can change anyone's role, admins can only change members to admin
+    if (currentUserMember.role === 'admin' && newRole === 'admin') {
+      throw new Error('Admins cannot promote members to admin role');
+    }
+
+    // Don't allow changing creator role
+    const { data: targetMember } = await supabase
+      .from('league_members')
+      .select('role')
+      .eq('league_id', leagueId)
+      .eq('user_id', userId)
+      .single();
+
+    if (targetMember?.role === 'creator') {
+      throw new Error('Cannot change creator role');
+    }
+
+    // Update the role
+    const { error } = await supabase
+      .from('league_members')
+      .update({ role: newRole })
+      .eq('league_id', leagueId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+  }
+
+  /**
+   * Remove member from league (admin/creator only)
+   */
+  static async removeMember(leagueId: string, userId: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Verify current user has permission
+    const { data: currentUserMember } = await supabase
+      .from('league_members')
+      .select('role')
+      .eq('league_id', leagueId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (!currentUserMember || !['creator', 'admin'].includes(currentUserMember.role)) {
+      throw new Error('You do not have permission to remove members');
+    }
+
+    // Don't allow removing creator
+    const { data: targetMember } = await supabase
+      .from('league_members')
+      .select('role')
+      .eq('league_id', leagueId)
+      .eq('user_id', userId)
+      .single();
+
+    if (targetMember?.role === 'creator') {
+      throw new Error('Cannot remove league creator');
+    }
+
+    // Don't allow self-removal (use leave league instead)
+    if (userId === user.id) {
+      throw new Error('Use leave league function to remove yourself');
+    }
+
+    // Mark member as inactive
+    const { error } = await supabase
+      .from('league_members')
+      .update({ is_active: false })
+      .eq('league_id', leagueId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    // Update league standings
+    await this.updateLeagueStandings(leagueId);
+  }
+
+  /**
+   * Transfer league ownership (creator only)
+   */
+  static async transferOwnership(leagueId: string, newOwnerId: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Verify current user is creator
+    const { data: league } = await supabase
+      .from('leagues')
+      .select('creator_id')
+      .eq('id', leagueId)
+      .single();
+
+    if (!league || league.creator_id !== user.id) {
+      throw new Error('Only the league creator can transfer ownership');
+    }
+
+    // Verify new owner is a member
+    const { data: newOwnerMember } = await supabase
+      .from('league_members')
+      .select('role, is_active')
+      .eq('league_id', leagueId)
+      .eq('user_id', newOwnerId)
+      .single();
+
+    if (!newOwnerMember || !newOwnerMember.is_active) {
+      throw new Error('New owner must be an active member of the league');
+    }
+
+    // Start transaction: update league creator and member roles
+    const { error: leagueError } = await supabase
+      .from('leagues')
+      .update({ creator_id: newOwnerId })
+      .eq('id', leagueId);
+
+    if (leagueError) throw leagueError;
+
+    // Update new owner to creator role
+    const { error: newOwnerError } = await supabase
+      .from('league_members')
+      .update({ role: 'creator' })
+      .eq('league_id', leagueId)
+      .eq('user_id', newOwnerId);
+
+    if (newOwnerError) throw newOwnerError;
+
+    // Update old owner to admin role
+    const { error: oldOwnerError } = await supabase
+      .from('league_members')
+      .update({ role: 'admin' })
+      .eq('league_id', leagueId)
+      .eq('user_id', user.id);
+
+    if (oldOwnerError) throw oldOwnerError;
+  }
+
+  /**
+   * Get league member statistics
+   */
+  static async getLeagueStats(leagueId: string) {
+    const { data: members, error: membersError } = await supabase
+      .from('league_members')
+      .select(`
+        user_id,
+        total_points,
+        user:users(display_name)
+      `)
+      .eq('league_id', leagueId)
+      .eq('is_active', true);
+
+    if (membersError) throw membersError;
+
+    const totalMembers = members?.length || 0;
+    const averagePoints = totalMembers > 0 
+      ? (members?.reduce((sum, m) => sum + (m.total_points || 0), 0) || 0) / totalMembers
+      : 0;
+
+    let topScorer = null;
+    if (members && members.length > 0) {
+      topScorer = members.reduce((top, current) => {
+        const currentPoints = current.total_points || 0;
+        const topPoints = top?.total_points || 0;
+        return currentPoints > topPoints ? current : top;
+      });
+    }
+
+    return {
+      totalMembers,
+      averagePoints: Math.round(averagePoints * 100) / 100,
+      topScorer: topScorer ? {
+        user_id: topScorer.user_id,
+        display_name: Array.isArray(topScorer.user) ? topScorer.user[0]?.display_name || 'Unknown' : 'Unknown',
+        points: topScorer.total_points || 0,
+      } : null,
+    };
+  }
+
+  /**
    * Update league standings
    */
   private static async updateLeagueStandings(leagueId: string): Promise<void> {
