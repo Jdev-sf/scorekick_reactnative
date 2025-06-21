@@ -1,8 +1,14 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MainTabParamList, LeaguesStackParamList, PredictionsStackParamList, ProfileStackParamList } from './types';
+
+// League screens
+import { LeaguesScreen } from '../features/leagues/screens/LeaguesScreen';
+import { CreateLeagueScreen } from '../features/leagues/screens/CreateLeagueScreen';
+import { JoinLeagueScreen } from '../features/leagues/screens/JoinLeagueScreen';
 
 // Placeholder screens - will be implemented later
 const HomeScreen = () => (
@@ -15,9 +21,9 @@ const PredictionsListScreen = () => (
     <Text>Predictions List Screen</Text>
   </View>
 );
-const LeaguesListScreen = () => (
+const LeagueDetailsScreen = () => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Leagues List Screen</Text>
+    <Text>League Details Screen</Text>
   </View>
 );
 const ProfileScreen = () => (
@@ -32,7 +38,10 @@ const ProfileStack = createStackNavigator<ProfileStackParamList>();
 
 const LeaguesNavigator = () => (
   <LeaguesStack.Navigator screenOptions={{ headerShown: false }}>
-    <LeaguesStack.Screen name="LeaguesList" component={LeaguesListScreen} />
+    <LeaguesStack.Screen name="LeaguesList" component={LeaguesScreen} />
+    <LeaguesStack.Screen name="CreateLeague" component={CreateLeagueScreen} />
+    <LeaguesStack.Screen name="JoinLeague" component={JoinLeagueScreen} />
+    <LeaguesStack.Screen name="LeagueDetails" component={LeagueDetailsScreen} />
   </LeaguesStack.Navigator>
 );
 
@@ -51,6 +60,8 @@ const ProfileNavigator = () => (
 const MainTab = createBottomTabNavigator<MainTabParamList>();
 
 export const MainNavigator = () => {
+  const insets = useSafeAreaInsets();
+  
   return (
     <MainTab.Navigator
       screenOptions={{
@@ -59,8 +70,13 @@ export const MainNavigator = () => {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E5E7EB',
-          paddingBottom: 5,
-          height: 60,
+          paddingBottom: Math.max(insets.bottom, 5),
+          paddingTop: 5,
+          height: Math.max(60 + insets.bottom, 60),
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
         },
         tabBarActiveTintColor: '#1976D2',
         tabBarInactiveTintColor: '#6B7280',

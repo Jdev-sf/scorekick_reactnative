@@ -46,3 +46,6 @@ export type MainTabNavigationProp = NavigationProp<MainTabParamList>;
 export type LeaguesNavigationProp = NavigationProp<LeaguesStackParamList>;
 export type PredictionsNavigationProp = NavigationProp<PredictionsStackParamList>;
 export type ProfileNavigationProp = NavigationProp<ProfileStackParamList>;
+
+// Combined type for main app navigation
+export type MainNavigationProp = NavigationProp<LeaguesStackParamList & PredictionsStackParamList & ProfileStackParamList>;
