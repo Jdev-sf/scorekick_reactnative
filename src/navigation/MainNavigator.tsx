@@ -9,6 +9,7 @@ import { MainTabParamList, LeaguesStackParamList, PredictionsStackParamList, Pro
 import { LeaguesScreen } from '../features/leagues/screens/LeaguesScreen';
 import { CreateLeagueScreen } from '../features/leagues/screens/CreateLeagueScreen';
 import { JoinLeagueScreen } from '../features/leagues/screens/JoinLeagueScreen';
+import { LeagueDetailsScreen } from '../features/leagues/screens/LeagueDetailsScreen';
 
 // Placeholder screens - will be implemented later
 const HomeScreen = () => (
@@ -19,11 +20,6 @@ const HomeScreen = () => (
 const PredictionsListScreen = () => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
     <Text>Predictions List Screen</Text>
-  </View>
-);
-const LeagueDetailsScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>League Details Screen</Text>
   </View>
 );
 const ProfileScreen = () => (
