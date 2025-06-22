@@ -6,20 +6,25 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useMatchesByRound } from '../hooks/useMatches';
 import { MatchCard } from './MatchCard';
+import { usePreciseBottomPadding } from '../../../hooks/useBottomTabBarHeight';
 import type { Match } from '../types';
 
 interface MatchCalendarProps {
   onMatchPress?: (match: Match) => void;
   initialRound?: number;
+  onRefresh?: () => Promise<void>;
+  refreshing?: boolean;
 }
 
-export function MatchCalendar({ onMatchPress, initialRound = 1 }: MatchCalendarProps) {
+export function MatchCalendar({ onMatchPress, initialRound = 1, onRefresh, refreshing = false }: MatchCalendarProps) {
   const [selectedRound, setSelectedRound] = useState(initialRound);
   
   const { data: matches, isLoading, error } = useMatchesByRound(selectedRound);
+  const contentPadding = usePreciseBottomPadding();
 
   const renderRoundSelector = () => {
     const rounds = Array.from({ length: 38 }, (_, i) => i + 1);
@@ -58,7 +63,7 @@ export function MatchCalendar({ onMatchPress, initialRound = 1 }: MatchCalendarP
     if (isLoading) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size=\"large\" color=\"#3B82F6\" />
+          <ActivityIndicator size="large" color="#3B82F6" />
           <Text style={styles.loadingText}>Caricamento partite...</Text>
         </View>
       );
@@ -106,7 +111,22 @@ export function MatchCalendar({ onMatchPress, initialRound = 1 }: MatchCalendarP
   return (
     <View style={styles.container}>
       {renderRoundSelector()}
-      <ScrollView style={styles.content}>
+      <ScrollView 
+        style={styles.content}
+        contentContainerStyle={{
+          paddingBottom: contentPadding
+        }}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#3B82F6']}
+              tintColor="#3B82F6"
+            />
+          ) : undefined
+        }
+      >
         {renderMatches()}
       </ScrollView>
     </View>

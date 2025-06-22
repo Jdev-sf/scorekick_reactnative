@@ -6,26 +6,48 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
-import { useSerieAStandings, useSyncStandings } from '../hooks/useMatches';
+import { useSerieAStandings } from '../hooks/useMatches';
+import { useSeasonContext } from '../contexts/SeasonContext';
+import { SeasonSelector } from './SeasonSelector';
+import { usePreciseBottomPadding } from '../../../hooks/useBottomTabBarHeight';
 import type { SerieAStanding } from '../types';
 
-interface SerieAStandingsProps {
-  showSyncButton?: boolean;
-  onTeamPress?: (team: SerieAStanding) => void;
+// Hook per gestire il context opzionale
+function useOptionalSeasonContext() {
+  try {
+    return useSeasonContext();
+  } catch (error) {
+    // Se non c'è il provider, restituisci valori di default
+    return {
+      selectedSeason: null,
+      selectSeason: () => {},
+      getSeasonDisplay: () => '',
+      isCurrentSeasonSelected: true,
+    };
+  }
 }
 
-export function SerieAStandings({ showSyncButton = false, onTeamPress }: SerieAStandingsProps) {
-  const { data: standings, isLoading, error } = useSerieAStandings();
-  const syncStandingsMutation = useSyncStandings();
+interface SerieAStandingsProps {
+  onTeamPress?: (team: SerieAStanding) => void;
+  onRefresh?: () => Promise<void>;
+  refreshing?: boolean;
+}
 
-  const handleSync = async () => {
-    try {
-      await syncStandingsMutation.mutateAsync();
-    } catch (error) {
-      console.error('Failed to sync standings:', error);
-    }
-  };
+export function SerieAStandings({ onTeamPress, onRefresh, refreshing = false }: SerieAStandingsProps) {
+  const { 
+    selectedSeason, 
+    selectSeason, 
+    getSeasonDisplay,
+    isCurrentSeasonSelected 
+  } = useOptionalSeasonContext();
+  
+  const { data: standings, isLoading, error } = useSerieAStandings(
+    selectedSeason?.year
+  );
+  
+  const contentPadding = usePreciseBottomPadding();
 
   const getPositionColor = (position: number) => {
     if (position <= 4) return '#10B981'; // Champions League
@@ -44,17 +66,21 @@ export function SerieAStandings({ showSyncButton = false, onTeamPress }: SerieAS
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <Text style={styles.title}>Classifica Serie A</Text>
-      {showSyncButton && (
-        <TouchableOpacity
-          style={styles.syncButton}
-          onPress={handleSync}
-          disabled={syncStandingsMutation.isPending}
-        >
-          <Text style={styles.syncButtonText}>
-            {syncStandingsMutation.isPending ? 'Sincronizzando...' : '↻ Aggiorna'}
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>Classifica Serie A</Text>
+        {!isCurrentSeasonSelected && selectedSeason && (
+          <View style={styles.historicalBadge}>
+            <Text style={styles.historicalBadgeText}>Storico</Text>
+          </View>
+        )}
+      </View>
+      
+      {selectedSeason !== null && (
+        <SeasonSelector
+          selectedSeason={selectedSeason}
+          onSeasonSelect={selectSeason}
+          style={styles.seasonSelector}
+        />
       )}
     </View>
   );
@@ -123,7 +149,7 @@ export function SerieAStandings({ showSyncButton = false, onTeamPress }: SerieAS
       <View style={styles.container}>
         {renderHeader()}
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size=\"large\" color=\"#3B82F6\" />
+          <ActivityIndicator size="large" color="#3B82F6" />
           <Text style={styles.loadingText}>Caricamento classifica...</Text>
         </View>
       </View>
@@ -162,14 +188,31 @@ export function SerieAStandings({ showSyncButton = false, onTeamPress }: SerieAS
   return (
     <View style={styles.container}>
       {renderHeader()}
-      <ScrollView style={styles.scrollView} horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.table}>
-          {renderTableHeader()}
-          <ScrollView style={styles.tableBody}>
-            {standings.map(renderTeamRow)}
-          </ScrollView>
-        </View>
-      </ScrollView>
+      <View style={styles.tableContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.table}>
+            {renderTableHeader()}
+            <ScrollView 
+              style={styles.tableBody}
+              contentContainerStyle={{
+                paddingBottom: contentPadding
+              }}
+              refreshControl={
+                onRefresh ? (
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={['#3B82F6']}
+                    tintColor="#3B82F6"
+                  />
+                ) : undefined
+              }
+            >
+              {standings.map(renderTeamRow)}
+            </ScrollView>
+          </View>
+        </ScrollView>
+      </View>
       
       <View style={styles.legend}>
         <View style={styles.legendRow}>
@@ -195,30 +238,37 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#111827',
+    flex: 1,
   },
-  syncButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#3B82F6',
-    borderRadius: 6,
+  historicalBadge: {
+    backgroundColor: '#FF9500',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 8,
   },
-  syncButtonText: {
-    color: '#FFFFFF',
+  historicalBadgeText: {
     fontSize: 12,
-    fontWeight: '500',
+    color: '#FFF',
+    fontWeight: '600',
   },
-  scrollView: {
+  seasonSelector: {
+    marginTop: 8,
+  },
+  tableContainer: {
     flex: 1,
   },
   table: {

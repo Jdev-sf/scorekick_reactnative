@@ -1,104 +1,133 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { MatchCalendar } from '../components/MatchCalendar';
 import { SerieAStandings } from '../components/SerieAStandings';
+import { SeasonProvider, useSeasonContext } from '../contexts/SeasonContext';
 import { useSyncData } from '../hooks/useMatches';
-import { Button } from '../../../components/ui/Button';
 import type { Match } from '../types';
 
 type TabType = 'calendar' | 'standings';
 
-export function MatchesScreen() {
+function MatchesScreenContent() {
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState<TabType>('calendar');
   const syncDataMutation = useSyncData();
+  const { selectedSeason, getSeasonDisplay } = useSeasonContext();
 
   const tabs = [
     { key: 'calendar', label: 'Calendario', icon: '📅' },
     { key: 'standings', label: 'Classifica', icon: '📊' },
   ];
 
+  // Auto-sync on component mount (one time only)
+  useEffect(() => {
+    const autoSync = async () => {
+      try {
+        console.log('[MatchesScreen] Auto-syncing data...');
+        await syncDataMutation.mutateAsync();
+      } catch (error) {
+        console.log('[MatchesScreen] Auto-sync failed, will rely on cached data:', error);
+        // Fail silently - users will still see cached data
+      }
+    };
+
+    // Auto-sync only on first mount
+    autoSync();
+  }, []);
+
   const handleMatchPress = (match: Match) => {
     navigation.navigate('MatchDetails', { match });
   };
 
-  const handleSync = async () => {
+  const handleRefresh = async () => {
     try {
-      const result = await syncDataMutation.mutateAsync();
-      
-      Alert.alert(
-        'Sincronizzazione Completata',
-        `Aggiornate ${result.matchesUpdated} partite e ${result.standingsUpdated} posizioni in classifica.${
-          result.errors.length > 0 ? `\\n\\nErrori: ${result.errors.length}` : ''
-        }`,
-        [{ text: 'OK' }]
-      );
+      console.log('[MatchesScreen] Manual refresh triggered');
+      await syncDataMutation.mutateAsync();
     } catch (error) {
-      Alert.alert(
-        'Errore Sincronizzazione',
-        'Non è stato possibile sincronizzare i dati. Riprova più tardi.',
-        [{ text: 'OK' }]
-      );
+      console.log('[MatchesScreen] Refresh failed:', error);
+      // Fail silently for better UX
     }
   };
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'calendar':
-        return <MatchCalendar onMatchPress={handleMatchPress} />;
+        return (
+          <MatchCalendar 
+            onMatchPress={handleMatchPress} 
+            onRefresh={handleRefresh}
+            refreshing={syncDataMutation.isPending}
+          />
+        );
       case 'standings':
-        return <SerieAStandings showSyncButton={false} />;
+        return (
+          <SerieAStandings 
+            onRefresh={handleRefresh}
+            refreshing={syncDataMutation.isPending}
+          />
+        );
       default:
-        return <MatchCalendar onMatchPress={handleMatchPress} />;
+        return (
+          <MatchCalendar 
+            onMatchPress={handleMatchPress} 
+            onRefresh={handleRefresh}
+            refreshing={syncDataMutation.isPending}
+          />
+        );
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Serie A 2024/25</Text>
-        <Button
-          title={syncDataMutation.isPending ? 'Sincronizzando...' : '↻ Sync'}
-          onPress={handleSync}
-          disabled={syncDataMutation.isPending}
-          variant=\"outline\"
-          style={styles.syncButton}
-        />
-      </View>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>
+            Serie A {selectedSeason ? getSeasonDisplay(selectedSeason) : '2024-25'}
+          </Text>
+          {syncDataMutation.isPending && (
+            <Text style={styles.syncStatus}>Aggiornando...</Text>
+          )}
+        </View>
 
-      <View style={styles.tabBar}>
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[
-              styles.tabButton,
-              activeTab === tab.key && styles.activeTabButton,
-            ]}
-            onPress={() => setActiveTab(tab.key as TabType)}
-          >
-            <Text style={styles.tabIcon}>{tab.icon}</Text>
-            <Text style={[
-              styles.tabLabel,
-              activeTab === tab.key && styles.activeTabLabel,
-            ]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+        <View style={styles.tabBar}>
+          {tabs.map((tab) => (
+            <TouchableOpacity
+              key={tab.key}
+              style={[
+                styles.tabButton,
+                activeTab === tab.key && styles.activeTabButton,
+              ]}
+              onPress={() => setActiveTab(tab.key as TabType)}
+            >
+              <Text style={styles.tabIcon}>{tab.icon}</Text>
+              <Text style={[
+                styles.tabLabel,
+                activeTab === tab.key && styles.activeTabLabel,
+              ]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      <View style={styles.content}>
-        {renderTabContent()}
-      </View>
+        <View style={styles.content}>
+          {renderTabContent()}
+        </View>
     </SafeAreaView>
+  );
+}
+
+export function MatchesScreen() {
+  return (
+    <SeasonProvider autoSelectCurrent={true}>
+      <MatchesScreenContent />
+    </SeasonProvider>
   );
 }
 
@@ -121,9 +150,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
   },
-  syncButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  syncStatus: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontStyle: 'italic',
   },
   tabBar: {
     flexDirection: 'row',

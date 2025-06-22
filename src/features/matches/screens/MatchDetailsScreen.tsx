@@ -109,8 +109,8 @@ export function MatchDetailsScreen() {
               Partita terminata. Le previsioni sono state valutate.
             </Text>
             <Button
-              title=\"Vedi Previsioni Lega\"
-              variant=\"outline\"
+              title="Vedi Previsioni Lega"
+              variant="outline"
               onPress={() => {
                 // Navigate to league predictions for this match
                 Alert.alert('In Sviluppo', 'Visualizzazione previsioni lega in arrivo');
@@ -137,7 +137,7 @@ export function MatchDetailsScreen() {
                 Scadenza: {deadlineDate.toLocaleString('it-IT')}
               </Text>
               <Button
-                title=\"Fai Previsione\"
+                title="Fai Previsione"
                 onPress={handleMakePrediction}
                 style={styles.predictionButton}
               />
