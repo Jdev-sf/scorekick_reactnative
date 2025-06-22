@@ -96,42 +96,81 @@ export class LeagueService {
   }
 
   /**
-   * Get user's leagues
+   * Get user's leagues using the helper function to avoid RLS recursion
    */
   static async getUserLeagues(): Promise<League[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
-    // Step 1: Get user's league memberships first
-    const { data: memberships, error: membershipsError } = await supabase
-      .from('league_members')
-      .select('league_id, role, joined_at, total_points')
-      .eq('user_id', user.id)
-      .eq('is_active', true);
+    try {
+      // Use the helper function that bypasses RLS
+      const { data: userLeagues, error } = await supabase
+        .rpc('get_user_leagues', { user_uuid: user.id });
 
-    if (membershipsError) throw membershipsError;
-    if (!memberships || memberships.length === 0) return [];
+      if (error) {
+        console.error('Error calling get_user_leagues:', error);
+        throw error;
+      }
+      
+      if (!userLeagues || userLeagues.length === 0) return [];
 
-    // Step 2: Get leagues data for those league IDs
-    const leagueIds = memberships.map(m => m.league_id);
-    const { data: leagues, error: leaguesError } = await supabase
-      .from('leagues')
-      .select('*')
-      .in('id', leagueIds)
-      .order('created_at', { ascending: false });
+      // Get additional league details using the view
+      const leagueIds = userLeagues.map((ul: any) => ul.league_id);
+      const { data: leagueDetails, error: detailsError } = await supabase
+        .from('league_details')
+        .select('*')
+        .in('id', leagueIds);
 
-    if (leaguesError) throw leaguesError;
+      if (detailsError) {
+        console.error('Error getting league details:', detailsError);
+        // Continue without details if this fails
+      }
 
-    // Step 3: Combine the data
-    const result = leagues?.map(league => {
-      const membership = memberships.find(m => m.league_id === league.id);
-      return {
-        ...league,
-        league_members: membership ? [membership] : [],
-      };
-    }) || [];
+      // Combine the data
+      const result = userLeagues.map((userLeague: any) => {
+        const details = leagueDetails?.find((ld: any) => ld.id === userLeague.league_id);
+        return {
+          id: userLeague.league_id,
+          name: userLeague.league_name || 'Unknown League',
+          invite_code: details?.invite_code || '',
+          creator_id: details?.creator_id || '',
+          created_at: details?.created_at || new Date().toISOString(),
+          member_count: details?.member_count || 0,
+          user_role: userLeague.role || 'member',
+          is_creator: userLeague.is_creator || false,
+        };
+      }) || [];
 
-    return result;
+      return result;
+    } catch (error) {
+      console.error('Error getting user leagues:', error);
+      
+      // Fallback to direct query if function fails
+      try {
+        console.log('Attempting fallback query...');
+        const { data: memberships, error: fallbackError } = await supabase
+          .from('user_league_memberships')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true);
+
+        if (fallbackError) throw fallbackError;
+
+        return memberships?.map((membership: any) => ({
+          id: membership.league_id,
+          name: membership.league_name || 'Unknown League',
+          invite_code: membership.invite_code || '',
+          creator_id: membership.creator_id || '',
+          created_at: membership.joined_at || new Date().toISOString(),
+          member_count: 0,
+          user_role: membership.role || 'member',
+          is_creator: membership.is_creator || false,
+        })) || [];
+      } catch (fallbackError) {
+        console.error('Fallback query also failed:', fallbackError);
+        throw new Error('Failed to load leagues');
+      }
+    }
   }
 
   /**
