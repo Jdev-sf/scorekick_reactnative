@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabase/client';
+import { OfflineSyncService } from '../../../services/offlineSyncService';
 import type { League, LeagueMember, CreateLeagueData, JoinLeagueData } from '../types';
 
 export class LeagueService {
@@ -49,50 +50,87 @@ export class LeagueService {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
-    // Find league by invite code
-    const { data: league, error: leagueError } = await supabase
-      .from('leagues')
-      .select('id')
-      .eq('invite_code', data.inviteCode.toUpperCase())
-      .single();
+    try {
+      // Find league by invite code
+      const { data: league, error: leagueError } = await supabase
+        .from('leagues')
+        .select('id')
+        .eq('invite_code', data.inviteCode.toUpperCase())
+        .single();
 
-    if (leagueError || !league) {
-      throw new Error('Invalid invite code');
-    }
+      if (leagueError || !league) {
+        throw new Error('Invalid invite code');
+      }
 
-    // Check if user is already a member
-    const { data: existingMember } = await supabase
-      .from('league_members')
-      .select('id')
-      .eq('league_id', league.id)
-      .eq('user_id', user.id)
-      .single();
+      // Check if user is already a member
+      const { data: existingMember } = await supabase
+        .from('league_members')
+        .select('id')
+        .eq('league_id', league.id)
+        .eq('user_id', user.id)
+        .single();
 
-    if (existingMember) {
-      throw new Error('You are already a member of this league');
-    }
+      if (existingMember) {
+        throw new Error('You are already a member of this league');
+      }
 
-    // Add user as member
-    const { data: member, error: memberError } = await supabase
-      .from('league_members')
-      .insert({
-        league_id: league.id,
+      // Add user as member
+      const { data: member, error: memberError } = await supabase
+        .from('league_members')
+        .insert({
+          league_id: league.id,
+          user_id: user.id,
+          role: 'member',
+        })
+        .select(`
+          *,
+          league:leagues(name, invite_code),
+          user:users(display_name, email)
+        `)
+        .single();
+
+      if (memberError) throw memberError;
+
+      // Update league standings
+      await this.updateLeagueStandings(league.id);
+
+      return member;
+    } catch (error) {
+      // If we're offline, queue for later sync
+      await OfflineSyncService.queueOfflineAction({
+        type: 'league_join',
+        data: {
+          invite_code: data.inviteCode.toUpperCase(),
+        },
+        userId: user.id,
+      });
+      
+      // Return a temporary member object for optimistic UI
+      const tempMember: LeagueMember = {
+        id: `temp_${Date.now()}`,
+        league_id: 'temp_league',
         user_id: user.id,
         role: 'member',
-      })
-      .select(`
-        *,
-        league:leagues(name, invite_code),
-        user:users(display_name, email)
-      `)
-      .single();
-
-    if (memberError) throw memberError;
-
-    // Update league standings
-    await this.updateLeagueStandings(league.id);
-
-    return member;
+        is_active: true,
+        points: 0,
+        rank: 0,
+        correct_predictions: 0,
+        exact_predictions: 0,
+        total_predictions: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        league: {
+          name: 'Joining...',
+          invite_code: data.inviteCode.toUpperCase(),
+        },
+        user: {
+          display_name: 'You',
+          email: user.email || '',
+        },
+      };
+      
+      return tempMember;
+    }
   }
 
   /**

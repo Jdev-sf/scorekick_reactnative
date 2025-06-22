@@ -11,6 +11,8 @@ import { MatchCalendar } from '../components/MatchCalendar';
 import { SerieAStandings } from '../components/SerieAStandings';
 import { SeasonProvider, useSeasonContext } from '../contexts/SeasonContext';
 import { useSyncData } from '../hooks/useMatches';
+import { NetworkStatusIndicator } from '../../../components/common/NetworkStatusIndicator';
+import { OfflineNotice } from '../../../components/common/OfflineNotice';
 import type { Match } from '../types';
 
 type TabType = 'calendar' | 'standings';
@@ -86,6 +88,12 @@ function MatchesScreenContent() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <NetworkStatusIndicator />
+      <OfflineNotice 
+        message="Limited connectivity. Match data may be outdated."
+        onRetry={handleRefresh}
+      />
+      
         <View style={styles.header}>
           <Text style={styles.headerTitle}>
             Serie A {selectedSeason ? getSeasonDisplay(selectedSeason) : '2024-25'}

@@ -9,11 +9,31 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { AuthProvider } from './src/features/auth/AuthProvider';
 import { ErrorBoundary } from './src/components/common/ErrorBoundary';
 import { BackgroundSyncService } from './src/services/backgroundSync';
+import { RealtimeService } from './src/services/realtimeService';
+import { OfflineSyncService } from './src/services/offlineSyncService';
+import { useNotificationHandler } from './src/hooks/useNotifications';
 
 export default function App() {
+  // Initialize notification handler
+  useNotificationHandler();
+
   useEffect(() => {
-    // Register background sync when app starts (only works in dev builds)
-    BackgroundSyncService.registerBackgroundSync();
+    // Initialize services when app starts
+    const initializeApp = async () => {
+      // Initialize offline sync service
+      await OfflineSyncService.initialize();
+      
+      // Register background sync (only works in dev builds)
+      BackgroundSyncService.registerBackgroundSync();
+      
+      // Initialize realtime connections
+      await RealtimeService.initialize();
+      
+      // Initial sync when app starts
+      BackgroundSyncService.manualSync();
+    };
+
+    initializeApp();
 
     // Set up manual sync for Expo Go when app becomes active
     const handleAppStateChange = (nextAppState: string) => {
@@ -25,11 +45,10 @@ export default function App() {
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
 
-    // Initial sync when app starts
-    BackgroundSyncService.manualSync();
-
     return () => {
       subscription?.remove();
+      // Cleanup realtime connections
+      RealtimeService.unsubscribeAll();
     };
   }, []);
 

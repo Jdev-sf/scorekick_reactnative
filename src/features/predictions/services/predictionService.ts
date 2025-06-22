@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabase/client';
+import { OfflineSyncService } from '../../../services/offlineSyncService';
 import type { 
   Prediction, 
   PredictionCreate, 
@@ -51,43 +52,70 @@ export class PredictionService {
    * Create a new prediction
    */
   static async createPrediction(userId: string, prediction: PredictionCreate): Promise<Prediction> {
-    // Check if prediction is allowed
-    const deadlineCheck = await this.isPredictionAllowed(prediction.match_id);
-    if (!deadlineCheck.allowed) {
-      throw new Error(deadlineCheck.reason || 'Prediction not allowed');
-    }
-
-    // Verify user is member of the league
-    const { data: membership, error: membershipError } = await supabase
-      .from('league_members')
-      .select('id')
-      .eq('league_id', prediction.league_id)
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .single();
-
-    if (membershipError || !membership) {
-      throw new Error('You are not a member of this league');
-    }
-
-    // Create the prediction
-    const { data, error } = await supabase
-      .from('predictions')
-      .insert({
-        user_id: userId,
-        ...prediction,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      if (error.code === '23505') { // Unique constraint violation
-        throw new Error('You have already made a prediction for this match in this league');
+    try {
+      // Check if prediction is allowed
+      const deadlineCheck = await this.isPredictionAllowed(prediction.match_id);
+      if (!deadlineCheck.allowed) {
+        throw new Error(deadlineCheck.reason || 'Prediction not allowed');
       }
-      throw new Error(`Failed to create prediction: ${error.message}`);
-    }
 
-    return data;
+      // Verify user is member of the league
+      const { data: membership, error: membershipError } = await supabase
+        .from('league_members')
+        .select('id')
+        .eq('league_id', prediction.league_id)
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .single();
+
+      if (membershipError || !membership) {
+        throw new Error('You are not a member of this league');
+      }
+
+      // Create the prediction
+      const { data, error } = await supabase
+        .from('predictions')
+        .insert({
+          user_id: userId,
+          ...prediction,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') { // Unique constraint violation
+          throw new Error('You have already made a prediction for this match in this league');
+        }
+        throw new Error(`Failed to create prediction: ${error.message}`);
+      }
+
+      return data;
+    } catch (error) {
+      // If we're offline or have connection issues, queue for later sync
+      await OfflineSyncService.queueOfflineAction({
+        type: 'prediction_create',
+        data: {
+          user_id: userId,
+          ...prediction,
+        },
+        userId,
+      });
+      
+      // Return a temporary prediction object for optimistic UI
+      const tempPrediction: Prediction = {
+        id: `temp_${Date.now()}`,
+        user_id: userId,
+        match_id: prediction.match_id,
+        league_id: prediction.league_id,
+        home_score_predicted: prediction.home_score_predicted,
+        away_score_predicted: prediction.away_score_predicted,
+        points_earned: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      return tempPrediction;
+    }
   }
 
   /**
