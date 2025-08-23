@@ -13,6 +13,7 @@ import Animated, {
 import { useTheme } from '../../../contexts/ThemeContext';
 import { TYPOGRAPHY, SPACING } from '../../../constants/theme';
 import { ProfileStackNavigationProp } from '../../../navigation/types';
+import { SeasonStatusCard } from '../components/SeasonStatusCard';
 
 interface SettingSection {
   id: string;
@@ -624,6 +625,9 @@ export const SettingsScreen: React.FC = () => {
 
           {/* Content */}
           <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
+            {/* Season Status Card */}
+            <SeasonStatusCard />
+            
             {/* Settings Sections */}
             {settingSections.map(section => (
               <SettingSectionCard key={section.id} section={section} />
