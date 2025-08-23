@@ -1,5 +1,6 @@
 import { supabase } from '../../../lib/supabase/client';
 import { OfflineSyncService } from '../../../services/offlineSyncService';
+import { SeasonService } from '../../matches/services/seasonService';
 import type { 
   Prediction, 
   PredictionCreate, 
@@ -14,18 +15,28 @@ export class PredictionService {
 
   /**
    * Check if predictions are allowed for a match
-   * Predictions must be made at least 15 minutes before kickoff
+   * Predictions must be made at least 15 minutes before kickoff and only for active seasons
    */
   static async isPredictionAllowed(matchId: string): Promise<{ allowed: boolean; reason?: string }> {
     try {
       const { data: match, error } = await supabase
         .from('matches')
-        .select('match_date, status')
+        .select(`
+          match_date, 
+          status,
+          season:seasons(year)
+        `)
         .eq('id', matchId)
         .single();
 
       if (error || !match) {
         return { allowed: false, reason: 'Match not found' };
+      }
+
+      // Check if the season is active (only active seasons allow predictions)
+      const seasonYear = match.season?.year;
+      if (!seasonYear || !SeasonService.isSeasonActive(seasonYear)) {
+        return { allowed: false, reason: 'Predictions are only allowed for the current season' };
       }
 
       // Check if match has already started or finished

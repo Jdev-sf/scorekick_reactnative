@@ -148,17 +148,22 @@ serve(async (req) => {
       }
     }
 
-    // Get current season
+    // Get current season based on date
     const getCurrentSeason = () => {
-      // TESTING STRATEGY: Start with 2024-25 (known good data)
-      // Switch to 2025-26 after verifying sync works
-      return '2024-25'
-      
-      /* Production logic (to be enabled after testing):
       const now = new Date()
       const year = now.getFullYear()
-      return now.getMonth() < 7 ? `${year - 1}-${year.toString().slice(-2)}` : `${year}-${(year + 1).toString().slice(-2)}`
-      */
+      
+      // Serie A season starts in August and ends in May/June
+      // If we're in January-July, we're in the second half of the season (e.g., 2024-25)
+      // If we're in August-December, we're in the first half of the new season (e.g., 2025-26)
+      
+      if (now.getMonth() < 7) { // January to July (months 0-6)
+        // We're in the second half of the season
+        return `${year - 1}-${year.toString().slice(-2)}`
+      } else { // August to December (months 7-11)  
+        // We're in the first half of the new season
+        return `${year}-${(year + 1).toString().slice(-2)}`
+      }
     }
     
     // Convert season format for API calls (2024-25 -> 2024)

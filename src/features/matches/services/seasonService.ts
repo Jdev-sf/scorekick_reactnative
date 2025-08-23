@@ -3,6 +3,33 @@ import type { Season, LeagueParticipation } from '../types';
 
 export class SeasonService {
   /**
+   * Get current season string based on date (e.g., "2025-26")
+   */
+  static getCurrentSeasonString(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    
+    // Serie A season starts in August and ends in May/June
+    // If we're in January-July, we're in the second half of the season (e.g., 2024-25)
+    // If we're in August-December, we're in the first half of the new season (e.g., 2025-26)
+    
+    if (now.getMonth() < 7) { // January to July (months 0-6)
+      // We're in the second half of the season
+      return `${year - 1}-${year.toString().slice(-2)}`;
+    } else { // August to December (months 7-11)  
+      // We're in the first half of the new season
+      return `${year}-${(year + 1).toString().slice(-2)}`;
+    }
+  }
+
+  /**
+   * Check if a season is currently active (can make predictions)
+   */
+  static isSeasonActive(seasonYear: string): boolean {
+    return seasonYear === this.getCurrentSeasonString();
+  }
+
+  /**
    * Get all available seasons, ordered by most recent first
    */
   static async getAllSeasons(): Promise<Season[]> {
