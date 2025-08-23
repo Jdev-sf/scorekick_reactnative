@@ -1,4 +1,4 @@
-import React, { useEffect, ReactNode } from 'react';
+import React, { useEffect, useLayoutEffect, ReactNode } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { supabase } from '../../lib/supabase/client';
 import { useAuthStore } from '../../lib/store/auth';
@@ -12,24 +12,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { setUser, setSession, setLoading, loading } = useAuthStore();
 
   useEffect(() => {
+    let isMounted = true;
+    
     // Get initial session
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (session?.user) {
+      if (isMounted && session?.user) {
         const { data: userData } = await supabase
           .from('users')
           .select('*')
           .eq('id', session.user.id)
           .single();
         
-        if (userData) {
+        if (isMounted && userData) {
           setUser(userData as User);
           setSession(session);
         }
       }
       
-      setLoading(false);
+      if (isMounted) {
+        setLoading(false);
+      }
     };
 
     getInitialSession();
@@ -56,6 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     );
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [setUser, setSession, setLoading]);

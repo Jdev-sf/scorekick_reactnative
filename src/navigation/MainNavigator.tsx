@@ -3,7 +3,9 @@ import { View, Text, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MainTabParamList, LeaguesStackParamList, MatchesStackParamList, PredictionsStackParamList, ProfileStackParamList } from './types';
+import { useTheme } from '../contexts/ThemeContext';
+import { MainTabParamList, LeaguesStackParamList, MatchesStackParamList, ProfileStackParamList } from './types';
+import { COLORS } from '../constants/theme';
 
 // League screens
 import { LeaguesScreen } from '../features/leagues/screens/LeaguesScreen';
@@ -12,29 +14,17 @@ import { JoinLeagueScreen } from '../features/leagues/screens/JoinLeagueScreen';
 import { LeagueDetailsScreen } from '../features/leagues/screens/LeagueDetailsScreen';
 
 // Match screens
-import { MatchesScreen } from '../features/matches/screens/MatchesScreen';
+import { MatchesAndPredictionsScreen } from '../features/matches/screens/MatchesAndPredictionsScreen';
 import { MatchDetailsScreen } from '../features/matches/screens/MatchDetailsScreen';
 
-// Placeholder screens - will be implemented later
-const HomeScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Home Screen</Text>
-  </View>
-);
-const PredictionsListScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Predictions List Screen</Text>
-  </View>
-);
-const ProfileScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Profile Screen</Text>
-  </View>
-);
+// Import implemented screens
+import { HomeScreen } from '../features/home/screens/HomeScreen';
+import { ProfileScreen } from '../features/profile/screens/ProfileScreen';
+import { SettingsScreen } from '../features/settings/screens/SettingsScreen';
+import { ThemeSettingsScreen } from '../features/settings/screens/ThemeSettingsScreen';
 
 const LeaguesStack = createStackNavigator<LeaguesStackParamList>();
 const MatchesStack = createStackNavigator<MatchesStackParamList>();
-const PredictionsStack = createStackNavigator<PredictionsStackParamList>();
 const ProfileStack = createStackNavigator<ProfileStackParamList>();
 
 const LeaguesNavigator = () => (
@@ -48,20 +38,16 @@ const LeaguesNavigator = () => (
 
 const MatchesNavigator = () => (
   <MatchesStack.Navigator screenOptions={{ headerShown: false }}>
-    <MatchesStack.Screen name="MatchesOverview" component={MatchesScreen} />
+    <MatchesStack.Screen name="MatchesOverview" component={MatchesAndPredictionsScreen} />
     <MatchesStack.Screen name="MatchDetails" component={MatchDetailsScreen} />
   </MatchesStack.Navigator>
-);
-
-const PredictionsNavigator = () => (
-  <PredictionsStack.Navigator screenOptions={{ headerShown: false }}>
-    <PredictionsStack.Screen name="PredictionsList" component={PredictionsListScreen} />
-  </PredictionsStack.Navigator>
 );
 
 const ProfileNavigator = () => (
   <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
     <ProfileStack.Screen name="ProfileOverview" component={ProfileScreen} />
+    <ProfileStack.Screen name="Settings" component={SettingsScreen} />
+    <ProfileStack.Screen name="ThemeSettings" component={ThemeSettingsScreen} />
   </ProfileStack.Navigator>
 );
 
@@ -69,25 +55,31 @@ const MainTab = createBottomTabNavigator<MainTabParamList>();
 
 export const MainNavigator = () => {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   
   return (
     <MainTab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
-          paddingBottom: Math.max(insets.bottom, 5),
-          paddingTop: 5,
-          height: Math.max(60 + insets.bottom, 60),
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
+          backgroundColor: colors.surface,
+          borderTopWidth: 0,
+          paddingBottom: Math.max(insets.bottom, 10),
+          paddingTop: 12,
+          height: Math.max(70 + insets.bottom, 70),
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: -1 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          elevation: 8,
         },
-        tabBarActiveTintColor: '#1976D2',
-        tabBarInactiveTintColor: '#6B7280',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+          marginTop: 4,
+        },
       }}
     >
       <MainTab.Screen 
@@ -95,23 +87,15 @@ export const MainNavigator = () => {
         component={HomeScreen}
         options={{
           tabBarLabel: 'Home',
-          tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>🏠</Text>,
+          tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size - 2 }}>🏟️</Text>,
         }}
       />
       <MainTab.Screen 
         name="Matches" 
         component={MatchesNavigator}
         options={{
-          tabBarLabel: 'Partite',
-          tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>⚽</Text>,
-        }}
-      />
-      <MainTab.Screen 
-        name="Predictions" 
-        component={PredictionsNavigator}
-        options={{
           tabBarLabel: 'Pronostici',
-          tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>🎯</Text>,
+          tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size - 2 }}>⚽</Text>,
         }}
       />
       <MainTab.Screen 

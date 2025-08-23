@@ -53,36 +53,36 @@ export function SyncStatusScreen() {
   const connectionStatus = getConnectionStatus();
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <ScrollView className="flex-1">
-        <View className="bg-white m-4 rounded-lg shadow-sm">
-          <View className="p-4 border-b border-gray-200">
-            <Text className="text-lg font-semibold text-gray-900">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+      <ScrollView style={{ flex: 1 }}>
+        <View style={{ backgroundColor: 'white', margin: 16, borderRadius: 8, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 }}>
+          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' }}>
+            <Text style={{ fontSize: 18, fontWeight: '600', color: '#111827' }}>
               Sync Status
             </Text>
           </View>
 
           {/* Connection Status */}
-          <View className="p-4 border-b border-gray-200">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-gray-700 font-medium">Connection Status</Text>
-              <View className={`px-3 py-1 rounded-full ${connectionStatus.bg}`}>
-                <Text className={`text-sm font-medium ${connectionStatus.color}`}>
+          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <Text style={{ color: '#374151', fontWeight: '500' }}>Connection Status</Text>
+              <View style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 50, backgroundColor: connectionStatus.bg === 'bg-green-100' ? '#dcfce7' : connectionStatus.bg === 'bg-orange-100' ? '#fed7aa' : '#fee2e2' }}>
+                <Text style={{ fontSize: 14, fontWeight: '500', color: connectionStatus.color === 'text-green-600' ? '#059669' : connectionStatus.color === 'text-orange-600' ? '#ea580c' : '#dc2626' }}>
                   {connectionStatus.text}
                 </Text>
               </View>
             </View>
             
-            <View className="space-y-2">
-              <View className="flex-row justify-between">
-                <Text className="text-gray-500">Internet Connection</Text>
-                <Text className={isOnline ? 'text-green-600' : 'text-red-600'}>
+            <View style={{ gap: 8 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ color: '#6b7280' }}>Internet Connection</Text>
+                <Text style={{ color: isOnline ? '#059669' : '#dc2626' }}>
                   {isOnline ? 'Available' : 'Unavailable'}
                 </Text>
               </View>
-              <View className="flex-row justify-between">
-                <Text className="text-gray-500">Server Reachable</Text>
-                <Text className={isConnected ? 'text-green-600' : 'text-red-600'}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ color: '#6b7280' }}>Server Reachable</Text>
+                <Text style={{ color: isConnected ? '#059669' : '#dc2626' }}>
                   {isConnected ? 'Yes' : 'No'}
                 </Text>
               </View>
@@ -90,13 +90,13 @@ export function SyncStatusScreen() {
           </View>
 
           {/* Sync Information */}
-          <View className="p-4 border-b border-gray-200">
-            <Text className="text-gray-700 font-medium mb-3">Sync Information</Text>
+          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' }}>
+            <Text style={{ color: '#374151', fontWeight: '500', marginBottom: 12 }}>Sync Information</Text>
             
-            <View className="space-y-2">
-              <View className="flex-row justify-between">
-                <Text className="text-gray-500">Last Sync</Text>
-                <Text className="text-gray-900">
+            <View style={{ gap: 8 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ color: '#6b7280' }}>Last Sync</Text>
+                <Text style={{ color: '#111827' }}>
                   {lastSyncTime 
                     ? formatDistanceToNow(lastSyncTime, { addSuffix: true })
                     : 'Never'
@@ -105,24 +105,24 @@ export function SyncStatusScreen() {
               </View>
               
               {lastSyncTime && (
-                <View className="flex-row justify-between">
-                  <Text className="text-gray-500">Exact Time</Text>
-                  <Text className="text-gray-600 text-sm">
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: '#6b7280' }}>Exact Time</Text>
+                  <Text style={{ color: '#4b5563', fontSize: 14 }}>
                     {format(lastSyncTime, 'MMM d, yyyy h:mm a')}
                   </Text>
                 </View>
               )}
               
-              <View className="flex-row justify-between">
-                <Text className="text-gray-500">Sync Status</Text>
-                <Text className={isSyncing ? 'text-blue-600' : 'text-gray-900'}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ color: '#6b7280' }}>Sync Status</Text>
+                <Text style={{ color: isSyncing ? '#2563eb' : '#111827' }}>
                   {isSyncing ? 'Syncing...' : 'Idle'}
                 </Text>
               </View>
               
-              <View className="flex-row justify-between">
-                <Text className="text-gray-500">Pending Actions</Text>
-                <Text className={pendingActions > 0 ? 'text-orange-600' : 'text-gray-900'}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ color: '#6b7280' }}>Pending Actions</Text>
+                <Text style={{ color: pendingActions > 0 ? '#ea580c' : '#111827' }}>
                   {pendingActions}
                 </Text>
               </View>
@@ -131,30 +131,30 @@ export function SyncStatusScreen() {
 
           {/* Error Information */}
           {syncError && (
-            <View className="p-4 border-b border-gray-200">
-              <Text className="text-gray-700 font-medium mb-2">Sync Error</Text>
-              <View className="bg-red-50 p-3 rounded-md">
-                <Text className="text-red-800 text-sm">{syncError}</Text>
+            <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' }}>
+              <Text style={{ color: '#374151', fontWeight: '500', marginBottom: 8 }}>Sync Error</Text>
+              <View style={{ backgroundColor: '#fef2f2', padding: 12, borderRadius: 6 }}>
+                <Text style={{ color: '#991b1b', fontSize: 14 }}>{syncError}</Text>
               </View>
             </View>
           )}
 
           {/* Actions */}
-          <View className="p-4 space-y-3">
+          <View style={{ padding: 16, gap: 12 }}>
             <TouchableOpacity
               onPress={handleForceSync}
               disabled={isSyncing || (!isOnline && pendingActions === 0)}
-              className={`p-3 rounded-md ${
-                isSyncing || (!isOnline && pendingActions === 0)
-                  ? 'bg-gray-100'
-                  : 'bg-blue-600'
-              }`}
+              style={{
+                padding: 12,
+                borderRadius: 6,
+                backgroundColor: isSyncing || (!isOnline && pendingActions === 0) ? '#f3f4f6' : '#2563eb'
+              }}
             >
-              <Text className={`text-center font-medium ${
-                isSyncing || (!isOnline && pendingActions === 0)
-                  ? 'text-gray-400'
-                  : 'text-white'
-              }`}>
+              <Text style={{
+                textAlign: 'center',
+                fontWeight: '500',
+                color: isSyncing || (!isOnline && pendingActions === 0) ? '#9ca3af' : 'white'
+              }}>
                 {isSyncing ? 'Syncing...' : 'Force Sync Now'}
               </Text>
             </TouchableOpacity>
@@ -162,9 +162,9 @@ export function SyncStatusScreen() {
             {pendingActions > 0 && (
               <TouchableOpacity
                 onPress={handleClearPending}
-                className="p-3 rounded-md border border-red-300 bg-red-50"
+                style={{ padding: 12, borderRadius: 6, borderWidth: 1, borderColor: '#fca5a5', backgroundColor: '#fef2f2' }}
               >
-                <Text className="text-center font-medium text-red-600">
+                <Text style={{ textAlign: 'center', fontWeight: '500', color: '#dc2626' }}>
                   Clear Pending Actions ({pendingActions})
                 </Text>
               </TouchableOpacity>
@@ -173,30 +173,30 @@ export function SyncStatusScreen() {
         </View>
 
         {/* Help Information */}
-        <View className="bg-white m-4 mt-0 rounded-lg shadow-sm">
-          <View className="p-4">
-            <Text className="text-gray-700 font-medium mb-3">About Sync</Text>
-            <Text className="text-gray-600 text-sm leading-5">
+        <View style={{ backgroundColor: 'white', margin: 16, marginTop: 0, borderRadius: 8, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 }}>
+          <View style={{ padding: 16 }}>
+            <Text style={{ color: '#374151', fontWeight: '500', marginBottom: 12 }}>About Sync</Text>
+            <Text style={{ color: '#4b5563', fontSize: 14, lineHeight: 20 }}>
               ScoreKick automatically syncs your predictions, league data, and scores when you're online. 
               When offline, your actions are stored locally and will sync when connection is restored.
             </Text>
             
-            <View className="mt-4 space-y-2">
-              <View className="flex-row">
-                <View className="w-3 h-3 bg-green-500 rounded-full mt-1 mr-3" />
-                <Text className="text-sm text-gray-600 flex-1">
+            <View style={{ marginTop: 16, gap: 8 }}>
+              <View style={{ flexDirection: 'row' }}>
+                <View style={{ width: 12, height: 12, backgroundColor: '#10b981', borderRadius: 6, marginTop: 4, marginRight: 12 }} />
+                <Text style={{ fontSize: 14, color: '#4b5563', flex: 1 }}>
                   Connected - Real-time sync active
                 </Text>
               </View>
-              <View className="flex-row">
-                <View className="w-3 h-3 bg-orange-500 rounded-full mt-1 mr-3" />
-                <Text className="text-sm text-gray-600 flex-1">
+              <View style={{ flexDirection: 'row' }}>
+                <View style={{ width: 12, height: 12, backgroundColor: '#f97316', borderRadius: 6, marginTop: 4, marginRight: 12 }} />
+                <Text style={{ fontSize: 14, color: '#4b5563', flex: 1 }}>
                   Limited - Some sync delays possible
                 </Text>
               </View>
-              <View className="flex-row">
-                <View className="w-3 h-3 bg-red-500 rounded-full mt-1 mr-3" />
-                <Text className="text-sm text-gray-600 flex-1">
+              <View style={{ flexDirection: 'row' }}>
+                <View style={{ width: 12, height: 12, backgroundColor: '#ef4444', borderRadius: 6, marginTop: 4, marginRight: 12 }} />
+                <Text style={{ fontSize: 14, color: '#4b5563', flex: 1 }}>
                   Offline - Actions stored for later sync
                 </Text>
               </View>

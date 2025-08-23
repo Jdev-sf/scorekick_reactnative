@@ -14,7 +14,6 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   Matches: undefined;
-  Predictions: undefined;
   Leagues: undefined;
   Profile: undefined;
 };
@@ -32,18 +31,13 @@ export type MatchesStackParamList = {
   MatchDetails: { match: any; leagueId?: string };
 };
 
-export type PredictionsStackParamList = {
-  PredictionsList: undefined;
-  PredictionDetails: { matchId: string; leagueId: string };
-  MakePrediction: { match: any; leagueId: string };
-};
-
 export type ProfileStackParamList = {
   ProfileOverview: undefined;
   EditProfile: undefined;
   Statistics: undefined;
   Achievements: undefined;
   Settings: undefined;
+  ThemeSettings: undefined;
 };
 
 export type RootNavigationProp = NavigationProp<RootStackParamList>;
@@ -51,8 +45,8 @@ export type AuthNavigationProp = NavigationProp<AuthStackParamList>;
 export type MainTabNavigationProp = NavigationProp<MainTabParamList>;
 export type LeaguesNavigationProp = NavigationProp<LeaguesStackParamList>;
 export type MatchesNavigationProp = NavigationProp<MatchesStackParamList>;
-export type PredictionsNavigationProp = NavigationProp<PredictionsStackParamList>;
 export type ProfileNavigationProp = NavigationProp<ProfileStackParamList>;
+export type ProfileStackNavigationProp = NavigationProp<ProfileStackParamList>;
 
 // Combined type for main app navigation
-export type MainNavigationProp = NavigationProp<LeaguesStackParamList & MatchesStackParamList & PredictionsStackParamList & ProfileStackParamList>;
+export type MainNavigationProp = NavigationProp<LeaguesStackParamList & MatchesStackParamList & ProfileStackParamList>;

@@ -51,7 +51,7 @@ export function useLiveMatchUpdates(enabled: boolean = true) {
       queryClient.invalidateQueries({ queryKey: ['matches'] });
       
       // Optionally update specific match in cache
-      if (payload.new?.id) {
+      if (payload.new && typeof payload.new === 'object' && 'id' in payload.new) {
         queryClient.setQueryData(['matches', 'detail', payload.new.id], payload.new);
       }
     },

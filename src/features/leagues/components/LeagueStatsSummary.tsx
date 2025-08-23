@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import { useTheme } from '../../../contexts/ThemeContext';
 import { useLeagueStatsSummary } from '../hooks/useStandings';
 
 interface LeagueStatsSummaryProps {
@@ -16,27 +17,42 @@ interface StatCardProps {
   value: string | number;
   subtitle?: string;
   icon?: string;
+  color?: string;
+  backgroundColor?: string;
 }
 
-function StatCard({ title, value, subtitle, icon }: StatCardProps) {
+function StatCard({ title, value, subtitle, icon, color, backgroundColor }: StatCardProps) {
+  const { colors, isDark } = useTheme();
+  
   return (
-    <View style={styles.statCard}>
+    <View style={[
+      styles.statCard,
+      { 
+        backgroundColor: backgroundColor || colors.primary + (isDark ? '25' : '10'),
+        borderWidth: isDark ? 1 : 0,
+        borderColor: colors.border,
+      }
+    ]}>
       {icon && <Text style={styles.statIcon}>{icon}</Text>}
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statTitle}>{title}</Text>
-      {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
+      <Text style={[
+        styles.statValue,
+        { color: color || colors.primary }
+      ]}>{value}</Text>
+      <Text style={[styles.statTitle, { color: colors.textSecondary }]}>{title}</Text>
+      {subtitle && <Text style={[styles.statSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
     </View>
   );
 }
 
 export function LeagueStatsSummary({ leagueId }: LeagueStatsSummaryProps) {
+  const { colors, isDark } = useTheme();
   const { data: summary, isLoading, error } = useLeagueStatsSummary(leagueId);
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color="#3B82F6" />
-        <Text style={styles.loadingText}>Loading stats...</Text>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading stats...</Text>
       </View>
     );
   }
@@ -44,7 +60,7 @@ export function LeagueStatsSummary({ leagueId }: LeagueStatsSummaryProps) {
   if (error || !summary) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load league stats</Text>
+        <Text style={[styles.errorText, { color: colors.error }]}>Failed to load league stats</Text>
       </View>
     );
   }
@@ -55,57 +71,82 @@ export function LeagueStatsSummary({ leagueId }: LeagueStatsSummaryProps) {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container, 
+      { 
+        backgroundColor: colors.card,
+        shadowColor: colors.shadow,
+        shadowOpacity: isDark ? 0.3 : 0.1,
+        elevation: isDark ? 6 : 3,
+        borderWidth: isDark ? 1 : 0,
+        borderColor: colors.border,
+      }
+    ]}>
       <View style={styles.header}>
-        <Text style={styles.leagueName}>{league.name}</Text>
-        <Text style={styles.leagueInfo}>
-          Created by {league.creator_name} • {leagueAge} days ago
+        <Text style={[styles.leagueName, { color: colors.text }]}>{league.name}</Text>
+        <Text style={[styles.leagueInfo, { color: colors.textSecondary }]}>
+          Creata da {league.creator_name} • {leagueAge} giorni fa
         </Text>
       </View>
 
       <View style={styles.statsGrid}>
         <StatCard
           icon="👥"
-          title="Members"
+          title="Membri"
           value={stats.totalMembers}
-          subtitle="Active participants"
+          subtitle="Partecipanti attivi"
+          color={colors.primary}
+          backgroundColor={colors.primary + (isDark ? '25' : '10')}
         />
         <StatCard
           icon="🎯"
-          title="Predictions"
+          title="Predizioni"
           value={stats.totalPredictions}
-          subtitle="Total made"
+          subtitle="Totali effettuate"
+          color={colors.success}
+          backgroundColor={colors.success + (isDark ? '25' : '10')}
         />
         <StatCard
           icon="⭐"
-          title="Avg Points"
+          title="Media Punti"
           value={stats.averagePoints}
-          subtitle="Per member"
+          subtitle="Per membro"
+          color={colors.warning}
+          backgroundColor={colors.warning + (isDark ? '25' : '10')}
         />
         <StatCard
           icon="🏆"
-          title="Total Points"
+          title="Punti Totali"
           value={stats.totalPoints}
-          subtitle="All members"
+          subtitle="Tutti i membri"
+          color={colors.secondary}
+          backgroundColor={colors.secondary + (isDark ? '25' : '10')}
         />
       </View>
 
       {topPerformers.length > 0 && (
         <View style={styles.topPerformersSection}>
-          <Text style={styles.sectionTitle}>🏅 Top Performers</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>🏅 Top Performers</Text>
           <View style={styles.topPerformersList}>
             {topPerformers.slice(0, 3).map((performer, index) => (
-              <View key={index} style={styles.performerCard}>
+              <View key={index} style={[
+                styles.performerCard,
+                { 
+                  backgroundColor: isDark ? colors.surface2 : colors.surfaceVariant,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: colors.border,
+                }
+              ]}>
                 <View style={styles.performerRank}>
                   <Text style={styles.rankEmoji}>
                     {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
                   </Text>
                 </View>
                 <View style={styles.performerInfo}>
-                  <Text style={styles.performerName}>
+                  <Text style={[styles.performerName, { color: colors.text }]}>
                     {performer.user?.display_name || 'Unknown'}
                   </Text>
-                  <Text style={styles.performerStats}>
+                  <Text style={[styles.performerStats, { color: colors.textSecondary }]}>
                     {performer.points} pts • {performer.exact_results} exact
                   </Text>
                 </View>
@@ -115,21 +156,60 @@ export function LeagueStatsSummary({ leagueId }: LeagueStatsSummaryProps) {
         </View>
       )}
 
-      <View style={styles.leagueHealthSection}>
-        <Text style={styles.sectionTitle}>📊 League Health</Text>
-        <View style={styles.healthMetrics}>
-          <View style={styles.healthMetric}>
-            <Text style={styles.healthLabel}>Activity Level</Text>
-            <Text style={styles.healthValue}>
+      <View style={[
+        styles.leagueHealthSection,
+        { 
+          borderTopColor: colors.border,
+          backgroundColor: isDark ? colors.surface1 + '50' : 'transparent',
+          borderRadius: isDark ? 8 : 0,
+          padding: isDark ? 16 : 16,
+          marginTop: isDark ? 8 : 0,
+        }
+      ]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>📊 League Health</Text>
+        <View style={[
+          styles.healthMetrics,
+          { 
+            gap: isDark ? 12 : 16,
+          }
+        ]}>
+          <View style={[
+            styles.healthMetric,
+            {
+              backgroundColor: isDark ? colors.surface2 : colors.surfaceVariant,
+              padding: 12,
+              borderRadius: 8,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: colors.border,
+            }
+          ]}>
+            <Text style={[styles.healthLabel, { color: colors.textSecondary }]}>Activity Level</Text>
+            <Text style={[styles.healthValue, { color: colors.text }]}>
               {stats.totalMembers > 0 
                 ? `${Math.round((stats.totalPredictions / stats.totalMembers) * 10) / 10} pred/member`
                 : 'No activity'
               }
             </Text>
           </View>
-          <View style={styles.healthMetric}>
-            <Text style={styles.healthLabel}>Engagement</Text>
-            <Text style={styles.healthValue}>
+          <View style={[
+            styles.healthMetric,
+            {
+              backgroundColor: isDark ? colors.surface2 : colors.surfaceVariant,
+              padding: 12,
+              borderRadius: 8,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: colors.border,
+            }
+          ]}>
+            <Text style={[styles.healthLabel, { color: colors.textSecondary }]}>Engagement</Text>
+            <Text style={[
+              styles.healthValue, 
+              { 
+                color: stats.totalMembers >= 5 ? colors.success : 
+                       stats.totalMembers >= 3 ? colors.warning : 
+                       colors.error
+              }
+            ]}>
               {stats.totalMembers >= 5 ? 'High' : stats.totalMembers >= 3 ? 'Medium' : 'Low'}
             </Text>
           </View>
@@ -141,15 +221,11 @@ export function LeagueStatsSummary({ leagueId }: LeagueStatsSummaryProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     margin: 16,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -159,14 +235,13 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginLeft: 8,
-    color: '#6B7280',
   },
   errorContainer: {
     padding: 20,
     alignItems: 'center',
   },
   errorText: {
-    color: '#DC2626',
+    // Color handled inline
   },
   header: {
     marginBottom: 20,
@@ -174,25 +249,22 @@ const styles = StyleSheet.create({
   leagueName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
     marginBottom: 4,
   },
   leagueInfo: {
     fontSize: 14,
-    color: '#6B7280',
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -8,
+    gap: 16,
     marginBottom: 20,
   },
   statCard: {
-    width: '48%',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
+    flex: 1,
+    minWidth: '45%',
     padding: 12,
-    margin: 8,
+    borderRadius: 8,
     alignItems: 'center',
   },
   statIcon: {
@@ -200,19 +272,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statValue: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#111827',
   },
   statTitle: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: 14,
     textAlign: 'center',
     marginTop: 2,
   },
   statSubtitle: {
-    fontSize: 10,
-    color: '#9CA3AF',
+    fontSize: 12,
     textAlign: 'center',
     marginTop: 1,
   },
@@ -222,7 +291,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 12,
   },
   topPerformersList: {
@@ -231,7 +299,6 @@ const styles = StyleSheet.create({
   performerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
     borderRadius: 8,
     padding: 12,
   },
@@ -247,33 +314,31 @@ const styles = StyleSheet.create({
   performerName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
   },
   performerStats: {
     fontSize: 12,
-    color: '#6B7280',
     marginTop: 2,
   },
   leagueHealthSection: {
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
     paddingTop: 16,
   },
   healthMetrics: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
   },
   healthMetric: {
     alignItems: 'center',
+    flex: 1,
   },
   healthLabel: {
     fontSize: 12,
-    color: '#6B7280',
     marginBottom: 4,
+    textAlign: 'center',
   },
   healthValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    textAlign: 'center',
   },
 });

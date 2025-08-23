@@ -15,6 +15,7 @@ interface LeagueStandingsProps {
   leagueId: string;
   showUserHighlight?: boolean;
   limit?: number;
+  scrollable?: boolean; // New prop to control ScrollView
 }
 
 interface StandingRowProps {
@@ -90,7 +91,7 @@ function StandingRow({ standing, isCurrentUser = false, onPress }: StandingRowPr
   );
 }
 
-export function LeagueStandings({ leagueId, showUserHighlight = true, limit }: LeagueStandingsProps) {
+export function LeagueStandings({ leagueId, showUserHighlight = true, limit, scrollable = true }: LeagueStandingsProps) {
   const { data: standings, isLoading, error } = useLeagueStandings(leagueId);
   const { data: userPosition } = useUserPosition(leagueId);
 
@@ -137,15 +138,27 @@ export function LeagueStandings({ leagueId, showUserHighlight = true, limit }: L
         )}
       </View>
 
-      <ScrollView style={styles.standingsList}>
-        {displayStandings.map((standing) => (
-          <StandingRow
-            key={standing.user_id}
-            standing={standing}
-            isCurrentUser={showUserHighlight && standing.user_id === userPosition?.user_id}
-          />
-        ))}
-      </ScrollView>
+      {scrollable ? (
+        <ScrollView style={styles.standingsList}>
+          {displayStandings.map((standing) => (
+            <StandingRow
+              key={standing.user_id}
+              standing={standing}
+              isCurrentUser={showUserHighlight && standing.user_id === userPosition?.user_id}
+            />
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={[styles.standingsList, { flex: 0 }]}>
+          {displayStandings.map((standing) => (
+            <StandingRow
+              key={standing.user_id}
+              standing={standing}
+              isCurrentUser={showUserHighlight && standing.user_id === userPosition?.user_id}
+            />
+          ))}
+        </View>
+      )}
 
       {limit && standings.length > limit && (
         <View style={styles.showMoreContainer}>

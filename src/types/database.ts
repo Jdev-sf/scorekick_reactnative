@@ -18,6 +18,9 @@ export interface Database {
           total_points: number
           created_at: string
           updated_at: string
+          user_metadata?: {
+            [key: string]: any
+          }
         }
         Insert: {
           id?: string

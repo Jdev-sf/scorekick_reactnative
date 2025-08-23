@@ -1,4 +1,4 @@
-import { storage } from '../lib/storage/mmkv';
+import { storage } from '../lib/storage/asyncStorage';
 import type { Match, SerieAStanding, Season } from '../features/matches/types';
 
 interface CacheEntry<T> {
@@ -59,7 +59,7 @@ export class OfflineCacheService {
   /**
    * Store data in cache with automatic expiration
    */
-  static set<T>(key: string, data: T, cacheType?: keyof typeof OfflineCacheService.CACHE_CONFIG): void {
+  static async set<T>(key: string, data: T, cacheType?: keyof typeof OfflineCacheService.CACHE_CONFIG): Promise<void> {
     try {
       const config = cacheType ? this.CACHE_CONFIG[cacheType] : { ttl: this.DEFAULT_TTL, priority: 1 };
       const now = Date.now();
@@ -73,13 +73,13 @@ export class OfflineCacheService {
       const cacheKey = this.CACHE_PREFIX + key;
       const serialized = JSON.stringify(entry);
       
-      storage.set(cacheKey, serialized);
+      await storage.set(cacheKey, serialized);
       
       // Update metadata
-      this.updateMetadata(cacheKey, serialized.length, config.priority);
+      await this.updateMetadata(cacheKey, serialized.length, config.priority);
       
       // Check if cache cleanup is needed
-      this.cleanupIfNeeded();
+      await this.cleanupIfNeeded();
       
       console.log(`📦 Cache SET: ${key} (${(serialized.length / 1024).toFixed(1)}KB, TTL: ${config.ttl / 1000}s)`);
     } catch (error) {
@@ -90,10 +90,10 @@ export class OfflineCacheService {
   /**
    * Get data from cache with automatic expiration check
    */
-  static get<T>(key: string): T | null {
+  static async get<T>(key: string): Promise<T | null> {
     try {
       const cacheKey = this.CACHE_PREFIX + key;
-      const cached = storage.getString(cacheKey);
+      const cached = await storage.getString(cacheKey);
       
       if (!cached) {
         console.log(`📦 Cache MISS: ${key}`);
@@ -106,18 +106,18 @@ export class OfflineCacheService {
       // Check if expired
       if (now > entry.expiresAt) {
         console.log(`📦 Cache EXPIRED: ${key} (expired ${(now - entry.expiresAt) / 1000}s ago)`);
-        this.delete(key);
+        await this.delete(key);
         return null;
       }
 
       // Update last accessed time
-      this.updateLastAccessed(cacheKey);
+      await this.updateLastAccessed(cacheKey);
       
       console.log(`📦 Cache HIT: ${key} (age: ${(now - entry.timestamp) / 1000}s)`);
       return entry.data;
     } catch (error) {
       console.error(`Failed to get cached data for key ${key}:`, error);
-      this.delete(key); // Remove corrupted cache entry
+      await this.delete(key); // Remove corrupted cache entry
       return null;
     }
   }
@@ -125,29 +125,30 @@ export class OfflineCacheService {
   /**
    * Check if data exists and is not expired
    */
-  static has(key: string): boolean {
-    return this.get(key) !== null;
+  static async has(key: string): Promise<boolean> {
+    const result = await this.get(key);
+    return result !== null;
   }
 
   /**
    * Delete specific cache entry
    */
-  static delete(key: string): void {
+  static async delete(key: string): Promise<void> {
     const cacheKey = this.CACHE_PREFIX + key;
-    storage.delete(cacheKey);
-    this.removeFromMetadata(cacheKey);
+    await storage.delete(cacheKey);
+    await this.removeFromMetadata(cacheKey);
     console.log(`📦 Cache DELETE: ${key}`);
   }
 
   /**
    * Clear all cache data
    */
-  static clear(): void {
-    const allKeys = storage.getAllKeys();
-    const cacheKeys = allKeys.filter(key => key.startsWith(this.CACHE_PREFIX));
+  static async clear(): Promise<void> {
+    const allKeys = await storage.getAllKeys();
+    const cacheKeys = Array.from(allKeys).filter(key => key.startsWith(this.CACHE_PREFIX));
     
-    cacheKeys.forEach(key => storage.delete(key));
-    storage.delete(this.METADATA_KEY);
+    await Promise.all(cacheKeys.map(key => storage.delete(key)));
+    await storage.delete(this.METADATA_KEY);
     
     console.log(`📦 Cache CLEARED: ${cacheKeys.length} entries removed`);
   }
@@ -155,14 +156,14 @@ export class OfflineCacheService {
   /**
    * Get cache statistics
    */
-  static getStats(): {
+  static async getStats(): Promise<{
     totalEntries: number;
     totalSize: number;
     sizeMB: number;
     oldestEntry: number;
     newestEntry: number;
-  } {
-    const metadata = this.getMetadata();
+  }> {
+    const metadata = await this.getMetadata();
     const entries = Object.values(metadata);
     
     if (entries.length === 0) {
@@ -197,12 +198,12 @@ export class OfflineCacheService {
     cacheType?: keyof typeof OfflineCacheService.CACHE_CONFIG
   ): Promise<{ data: T; fromCache: boolean }> {
     // Try cache first
-    const cached = this.get<T>(key);
+    const cached = await this.get<T>(key);
     
     if (cached) {
       // Return cached data immediately, but still fetch fresh data in background
-      fetchFn().then(freshData => {
-        this.set(key, freshData, cacheType);
+      fetchFn().then(async freshData => {
+        await this.set(key, freshData, cacheType);
       }).catch(error => {
         console.warn(`Background fetch failed for ${key}:`, error);
       });
@@ -213,7 +214,7 @@ export class OfflineCacheService {
     // No cache, fetch fresh data
     try {
       const freshData = await fetchFn();
-      this.set(key, freshData, cacheType);
+      await this.set(key, freshData, cacheType);
       return { data: freshData, fromCache: false };
     } catch (error) {
       console.error(`Failed to fetch fresh data for ${key}:`, error);
@@ -231,11 +232,11 @@ export class OfflineCacheService {
     cacheType?: keyof typeof OfflineCacheService.CACHE_CONFIG,
     onUpdate?: (data: T) => void
   ): Promise<T> {
-    const cached = this.get<T>(key);
+    const cached = await this.get<T>(key);
     
     // Fetch fresh data in background
-    fetchFn().then(freshData => {
-      this.set(key, freshData, cacheType);
+    fetchFn().then(async freshData => {
+      await this.set(key, freshData, cacheType);
       if (onUpdate && JSON.stringify(cached) !== JSON.stringify(freshData)) {
         onUpdate(freshData);
       }
@@ -248,60 +249,60 @@ export class OfflineCacheService {
     }
 
     // No cache, wait for fresh data
-    return await fetchFn();
+    return fetchFn();
   }
 
   // Private helper methods
 
-  private static getMetadata(): Record<string, CacheMetadata> {
+  private static async getMetadata(): Promise<Record<string, CacheMetadata>> {
     try {
-      const metadata = storage.getString(this.METADATA_KEY);
+      const metadata = await storage.getString(this.METADATA_KEY);
       return metadata ? JSON.parse(metadata) : {};
     } catch {
       return {};
     }
   }
 
-  private static saveMetadata(metadata: Record<string, CacheMetadata>): void {
-    storage.set(this.METADATA_KEY, JSON.stringify(metadata));
+  private static async saveMetadata(metadata: Record<string, CacheMetadata>): Promise<void> {
+    await storage.set(this.METADATA_KEY, JSON.stringify(metadata));
   }
 
-  private static updateMetadata(key: string, size: number, priority: number): void {
-    const metadata = this.getMetadata();
+  private static async updateMetadata(key: string, size: number, priority: number): Promise<void> {
+    const metadata = await this.getMetadata();
     metadata[key] = {
       key,
       size,
       lastAccessed: Date.now(),
       priority,
     };
-    this.saveMetadata(metadata);
+    await this.saveMetadata(metadata);
   }
 
-  private static updateLastAccessed(key: string): void {
-    const metadata = this.getMetadata();
+  private static async updateLastAccessed(key: string): Promise<void> {
+    const metadata = await this.getMetadata();
     if (metadata[key]) {
       metadata[key].lastAccessed = Date.now();
-      this.saveMetadata(metadata);
+      await this.saveMetadata(metadata);
     }
   }
 
-  private static removeFromMetadata(key: string): void {
-    const metadata = this.getMetadata();
+  private static async removeFromMetadata(key: string): Promise<void> {
+    const metadata = await this.getMetadata();
     delete metadata[key];
-    this.saveMetadata(metadata);
+    await this.saveMetadata(metadata);
   }
 
-  private static cleanupIfNeeded(): void {
-    const stats = this.getStats();
+  private static async cleanupIfNeeded(): Promise<void> {
+    const stats = await this.getStats();
     
     if (stats.totalSize > this.MAX_CACHE_SIZE) {
       console.log(`📦 Cache cleanup needed: ${stats.sizeMB.toFixed(1)}MB > ${this.MAX_CACHE_SIZE / (1024 * 1024)}MB`);
-      this.performCleanup();
+      await this.performCleanup();
     }
   }
 
-  private static performCleanup(): void {
-    const metadata = this.getMetadata();
+  private static async performCleanup(): Promise<void> {
+    const metadata = await this.getMetadata();
     const entries = Object.values(metadata);
     
     // Sort by priority (desc) then by last accessed (asc)
@@ -318,17 +319,17 @@ export class OfflineCacheService {
     const toRemove = entries.slice(-itemsToRemove);
     
     let removedSize = 0;
-    toRemove.forEach(item => {
-      storage.delete(item.key);
+    await Promise.all(toRemove.map(async item => {
+      await storage.delete(item.key);
       removedSize += item.size;
-    });
+    }));
 
     // Update metadata
     const newMetadata = { ...metadata };
     toRemove.forEach(item => {
       delete newMetadata[item.key];
     });
-    this.saveMetadata(newMetadata);
+    await this.saveMetadata(newMetadata);
     
     console.log(`📦 Cache cleanup: removed ${toRemove.length} items (${(removedSize / 1024).toFixed(1)}KB)`);
   }
@@ -342,56 +343,56 @@ export class MatchCacheService {
   /**
    * Cache live matches with short TTL
    */
-  static cacheLiveMatches(matches: Match[]): void {
-    OfflineCacheService.set('live_matches', matches, 'liveMatches');
+  static async cacheLiveMatches(matches: Match[]): Promise<void> {
+    await OfflineCacheService.set('live_matches', matches, 'liveMatches');
   }
 
-  static getLiveMatches(): Match[] | null {
-    return OfflineCacheService.get<Match[]>('live_matches');
+  static async getLiveMatches(): Promise<Match[] | null> {
+    return await OfflineCacheService.get<Match[]>('live_matches');
   }
 
   /**
    * Cache matches by round
    */
-  static cacheRoundMatches(round: number, matches: Match[]): void {
-    OfflineCacheService.set(`round_${round}_matches`, matches, 'roundMatches');
+  static async cacheRoundMatches(round: number, matches: Match[]): Promise<void> {
+    await OfflineCacheService.set(`round_${round}_matches`, matches, 'roundMatches');
   }
 
-  static getRoundMatches(round: number): Match[] | null {
-    return OfflineCacheService.get<Match[]>(`round_${round}_matches`);
+  static async getRoundMatches(round: number): Promise<Match[] | null> {
+    return await OfflineCacheService.get<Match[]>(`round_${round}_matches`);
   }
 
   /**
    * Cache upcoming matches
    */
-  static cacheUpcomingMatches(matches: Match[]): void {
-    OfflineCacheService.set('upcoming_matches', matches, 'upcomingMatches');
+  static async cacheUpcomingMatches(matches: Match[]): Promise<void> {
+    await OfflineCacheService.set('upcoming_matches', matches, 'upcomingMatches');
   }
 
-  static getUpcomingMatches(): Match[] | null {
-    return OfflineCacheService.get<Match[]>('upcoming_matches');
+  static async getUpcomingMatches(): Promise<Match[] | null> {
+    return await OfflineCacheService.get<Match[]>('upcoming_matches');
   }
 
   /**
    * Cache Serie A standings
    */
-  static cacheStandings(standings: SerieAStanding[]): void {
-    OfflineCacheService.set('serie_a_standings', standings, 'standings');
+  static async cacheStandings(standings: SerieAStanding[]): Promise<void> {
+    await OfflineCacheService.set('serie_a_standings', standings, 'standings');
   }
 
-  static getStandings(): SerieAStanding[] | null {
-    return OfflineCacheService.get<SerieAStanding[]>('serie_a_standings');
+  static async getStandings(): Promise<SerieAStanding[] | null> {
+    return await OfflineCacheService.get<SerieAStanding[]>('serie_a_standings');
   }
 
   /**
    * Cache seasons
    */
-  static cacheSeasons(seasons: Season[]): void {
-    OfflineCacheService.set('seasons', seasons, 'seasons');
+  static async cacheSeasons(seasons: Season[]): Promise<void> {
+    await OfflineCacheService.set('seasons', seasons, 'seasons');
   }
 
-  static getSeasons(): Season[] | null {
-    return OfflineCacheService.get<Season[]>('seasons');
+  static async getSeasons(): Promise<Season[] | null> {
+    return await OfflineCacheService.get<Season[]>('seasons');
   }
 
   /**

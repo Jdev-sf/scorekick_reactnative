@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { useTheme } from '../../../contexts/ThemeContext';
 import { useSerieAStandings } from '../hooks/useMatches';
 import { useSeasonContext } from '../contexts/SeasonContext';
 import { SeasonSelector } from './SeasonSelector';
@@ -36,6 +37,7 @@ interface SerieAStandingsProps {
 }
 
 export function SerieAStandings({ onTeamPress, onRefresh, refreshing = false }: SerieAStandingsProps) {
+  const { colors } = useTheme();
   const { 
     selectedSeason, 
     selectSeason, 
@@ -65,12 +67,12 @@ export function SerieAStandings({ onTeamPress, onRefresh, refreshing = false }: 
   };
 
   const renderHeader = () => (
-    <View style={styles.header}>
+    <View style={[styles.header, { borderBottomColor: colors.border }]}>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>Classifica Serie A</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Classifica Serie A</Text>
         {!isCurrentSeasonSelected && selectedSeason && (
-          <View style={styles.historicalBadge}>
-            <Text style={styles.historicalBadgeText}>Storico</Text>
+          <View style={[styles.historicalBadge, { backgroundColor: colors.warning }]}>
+            <Text style={[styles.historicalBadgeText, { color: '#FFFFFF' }]}>Storico</Text>
           </View>
         )}
       </View>
@@ -86,17 +88,17 @@ export function SerieAStandings({ onTeamPress, onRefresh, refreshing = false }: 
   );
 
   const renderTableHeader = () => (
-    <View style={styles.tableHeader}>
-      <Text style={[styles.headerCell, styles.positionCell]}>#</Text>
-      <Text style={[styles.headerCell, styles.teamCell]}>Squadra</Text>
-      <Text style={[styles.headerCell, styles.statCell]}>PG</Text>
-      <Text style={[styles.headerCell, styles.statCell]}>V</Text>
-      <Text style={[styles.headerCell, styles.statCell]}>N</Text>
-      <Text style={[styles.headerCell, styles.statCell]}>P</Text>
-      <Text style={[styles.headerCell, styles.statCell]}>GF</Text>
-      <Text style={[styles.headerCell, styles.statCell]}>GS</Text>
-      <Text style={[styles.headerCell, styles.statCell]}>DR</Text>
-      <Text style={[styles.headerCell, styles.pointsCell]}>Pt</Text>
+    <View style={[styles.tableHeader, { backgroundColor: colors.surface }]}>
+      <Text style={[styles.headerCell, styles.positionCell, { color: colors.textSecondary }]}>#</Text>
+      <Text style={[styles.headerCell, styles.teamCell, styles.teamHeaderCell, { color: colors.textSecondary }]}>Squadra</Text>
+      <Text style={[styles.headerCell, styles.statCell, { color: colors.textSecondary }]}>PG</Text>
+      <Text style={[styles.headerCell, styles.statCell, { color: colors.textSecondary }]}>V</Text>
+      <Text style={[styles.headerCell, styles.statCell, { color: colors.textSecondary }]}>N</Text>
+      <Text style={[styles.headerCell, styles.statCell, { color: colors.textSecondary }]}>P</Text>
+      <Text style={[styles.headerCell, styles.statCell, { color: colors.textSecondary }]}>GF</Text>
+      <Text style={[styles.headerCell, styles.statCell, { color: colors.textSecondary }]}>GS</Text>
+      <Text style={[styles.headerCell, styles.statCell, { color: colors.textSecondary }]}>DR</Text>
+      <Text style={[styles.headerCell, styles.pointsCell, { color: colors.textSecondary }]}>Pt</Text>
     </View>
   );
 
@@ -107,9 +109,9 @@ export function SerieAStandings({ onTeamPress, onRefresh, refreshing = false }: 
     const content = (
       <View style={styles.teamRow}>
         <View style={[styles.positionIndicator, { backgroundColor: positionColor }]} />
-        <Text style={[styles.cell, styles.positionCell]}>{team.position}</Text>
+        <Text style={[styles.cell, styles.positionCell, { color: colors.textPrimary }]}>{team.position}</Text>
         <View style={[styles.cell, styles.teamCell]}>
-          <Text style={styles.teamName} numberOfLines={1}>
+          <Text style={[styles.teamName, { color: colors.textPrimary }]} numberOfLines={1}>
             {team.team_name}
           </Text>
           {positionLabel && (
@@ -118,16 +120,16 @@ export function SerieAStandings({ onTeamPress, onRefresh, refreshing = false }: 
             </Text>
           )}
         </View>
-        <Text style={[styles.cell, styles.statCell]}>{team.played}</Text>
-        <Text style={[styles.cell, styles.statCell]}>{team.won}</Text>
-        <Text style={[styles.cell, styles.statCell]}>{team.drawn}</Text>
-        <Text style={[styles.cell, styles.statCell]}>{team.lost}</Text>
-        <Text style={[styles.cell, styles.statCell]}>{team.goals_for}</Text>
-        <Text style={[styles.cell, styles.statCell]}>{team.goals_against}</Text>
-        <Text style={[styles.cell, styles.statCell]}>
+        <Text style={[styles.cell, styles.statCell, { color: colors.textSecondary }]}>{team.played}</Text>
+        <Text style={[styles.cell, styles.statCell, { color: colors.textSecondary }]}>{team.won}</Text>
+        <Text style={[styles.cell, styles.statCell, { color: colors.textSecondary }]}>{team.drawn}</Text>
+        <Text style={[styles.cell, styles.statCell, { color: colors.textSecondary }]}>{team.lost}</Text>
+        <Text style={[styles.cell, styles.statCell, { color: colors.textSecondary }]}>{team.goals_for}</Text>
+        <Text style={[styles.cell, styles.statCell, { color: colors.textSecondary }]}>{team.goals_against}</Text>
+        <Text style={[styles.cell, styles.statCell, { color: colors.textSecondary }]}>
           {team.goal_difference >= 0 ? '+' : ''}{team.goal_difference}
         </Text>
-        <Text style={[styles.cell, styles.pointsCell, styles.pointsValue]}>
+        <Text style={[styles.cell, styles.pointsCell, styles.pointsValue, { color: colors.textPrimary }]}>
           {team.points}
         </Text>
       </View>
@@ -146,11 +148,11 @@ export function SerieAStandings({ onTeamPress, onRefresh, refreshing = false }: 
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {renderHeader()}
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Caricamento classifica...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Caricamento classifica...</Text>
         </View>
       </View>
     );
@@ -158,11 +160,11 @@ export function SerieAStandings({ onTeamPress, onRefresh, refreshing = false }: 
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {renderHeader()}
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Errore nel caricamento della classifica</Text>
-          <Text style={styles.errorSubtext}>
+          <Text style={[styles.errorText, { color: colors.error }]}>Errore nel caricamento della classifica</Text>
+          <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>
             {error instanceof Error ? error.message : 'Errore sconosciuto'}
           </Text>
         </View>
@@ -172,12 +174,12 @@ export function SerieAStandings({ onTeamPress, onRefresh, refreshing = false }: 
 
   if (!standings || standings.length === 0) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {renderHeader()}
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>📊</Text>
-          <Text style={styles.emptyTitle}>Classifica non disponibile</Text>
-          <Text style={styles.emptySubtext}>
+          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Classifica non disponibile</Text>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
             I dati della classifica non sono ancora stati sincronizzati
           </Text>
         </View>
@@ -186,46 +188,31 @@ export function SerieAStandings({ onTeamPress, onRefresh, refreshing = false }: 
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {renderHeader()}
       <View style={styles.tableContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.table}>
             {renderTableHeader()}
-            <ScrollView 
-              style={styles.tableBody}
-              contentContainerStyle={{
-                paddingBottom: contentPadding
-              }}
-              refreshControl={
-                onRefresh ? (
-                  <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                    colors={['#3B82F6']}
-                    tintColor="#3B82F6"
-                  />
-                ) : undefined
-              }
-            >
+            <View style={styles.tableBody}>
               {standings.map(renderTeamRow)}
-            </ScrollView>
+            </View>
           </View>
         </ScrollView>
       </View>
       
-      <View style={styles.legend}>
+      <View style={[styles.legend, { backgroundColor: colors.surface }]}>
         <View style={styles.legendRow}>
           <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
-          <Text style={styles.legendText}>Champions League</Text>
+          <Text style={[styles.legendText, { color: colors.textSecondary }]}>Champions League</Text>
         </View>
         <View style={styles.legendRow}>
           <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
-          <Text style={styles.legendText}>Europa/Conference League</Text>
+          <Text style={[styles.legendText, { color: colors.textSecondary }]}>Europa/Conference League</Text>
         </View>
         <View style={styles.legendRow}>
           <View style={[styles.legendDot, { backgroundColor: '#DC2626' }]} />
-          <Text style={styles.legendText}>Retrocessione</Text>
+          <Text style={[styles.legendText, { color: colors.textSecondary }]}>Retrocessione</Text>
         </View>
       </View>
     </View>
@@ -269,10 +256,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   tableContainer: {
-    flex: 1,
+    // Rimuovi flex e maxHeight - ora la tabella si espande naturalmente
   },
   table: {
-    minWidth: 800,
+    width: 420, // Larghezza ottimizzata: 30+120+30*7+40 = 400 + padding
   },
   tableHeader: {
     flexDirection: 'row',
@@ -283,7 +270,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   tableBody: {
-    flex: 1,
+    // Rimuovi limitazioni - ora si espande per mostrare tutte le squadre
   },
   headerCell: {
     fontSize: 12,
@@ -317,8 +304,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   teamCell: {
-    width: 150,
+    width: 120, // Ridotto da 150 a 120px
     alignItems: 'flex-start',
+    paddingLeft: 8,
+  },
+  teamHeaderCell: {
+    textAlign: 'left',
     paddingLeft: 8,
   },
   teamName: {
@@ -332,7 +323,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statCell: {
-    width: 35,
+    width: 30, // Ridotto da 35 a 30px
   },
   pointsCell: {
     width: 40,

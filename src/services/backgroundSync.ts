@@ -96,7 +96,7 @@ export class BackgroundSyncService {
     try {
       const BackgroundFetch = await import('expo-background-fetch');
       const status = await BackgroundFetch.getStatusAsync();
-      return status || 'denied';
+      return typeof status === 'string' ? status : 'denied';
     } catch (error) {
       return 'error';
     }

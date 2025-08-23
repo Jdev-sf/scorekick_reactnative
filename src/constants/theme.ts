@@ -18,17 +18,23 @@ export const COLORS = {
   gray800: '#1F2937',
   gray900: '#111827',
   
-  // Backgrounds
+  // Backgrounds - Material Design 3 compliant
   background: '#FFFFFF',
-  backgroundDark: '#0F172A',
+  backgroundDark: '#121212',
   surface: '#F8FAFC',
-  surfaceDark: '#1E293B',
+  surfaceDark: '#1E1E1E',
+  surface1Dark: '#1F1F1F',      // Elevated surface +1
+  surface2Dark: '#232323',      // Elevated surface +2
+  surface3Dark: '#262626',      // Elevated surface +3
+  surface4Dark: '#2A2A2A',      // Elevated surface +4
+  surface5Dark: '#2E2E2E',      // Elevated surface +5
   
-  // Text
+  // Text - WCAG AA compliant
   textPrimary: '#1F2937',
   textSecondary: '#6B7280',
-  textPrimaryDark: '#F8FAFC',
-  textSecondaryDark: '#CBD5E1',
+  textPrimaryDark: 'rgba(255, 255, 255, 0.87)',    // 87% white opacity
+  textSecondaryDark: 'rgba(255, 255, 255, 0.60)',  // 60% white opacity
+  textTertiaryDark: 'rgba(255, 255, 255, 0.38)',   // 38% white opacity
 } as const;
 
 export const SPACING = {

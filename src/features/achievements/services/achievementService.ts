@@ -407,6 +407,169 @@ export class AchievementService {
   }
 
   /**
+   * Reset seasonal achievements for all users
+   */
+  static async resetSeasonalAchievements(seasonId?: string): Promise<void> {
+    try {
+      // Get all repeatable achievements (seasonal achievements)
+      const { data: seasonalAchievements, error: achievementsError } = await supabase
+        .from('achievements')
+        .select('id, name')
+        .eq('is_repeatable', true);
+
+      if (achievementsError || !seasonalAchievements) {
+        throw new Error('Failed to fetch seasonal achievements');
+      }
+
+      console.log(`Resetting ${seasonalAchievements.length} seasonal achievements...`);
+
+      // Archive current seasonal achievements instead of deleting
+      const { error: archiveError } = await supabase
+        .from('user_achievements')
+        .update({ 
+          archived: true,
+          archived_at: new Date().toISOString(),
+          season_context: seasonId || 'legacy'
+        })
+        .in('achievement_id', seasonalAchievements.map(a => a.id));
+
+      if (archiveError) {
+        throw new Error(`Failed to archive seasonal achievements: ${archiveError.message}`);
+      }
+
+      console.log('Seasonal achievements reset successfully');
+    } catch (error) {
+      console.error('Failed to reset seasonal achievements:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's achievements for a specific season
+   */
+  static async getUserSeasonalAchievements(
+    userId: string, 
+    leagueId: string, 
+    seasonId?: string,
+    includeArchived: boolean = false
+  ): Promise<(UserAchievement & { achievement: Achievement })[]> {
+    try {
+      let query = supabase
+        .from('user_achievements')
+        .select(`
+          *,
+          achievement:achievements(*)
+        `)
+        .eq('user_id', userId)
+        .eq('league_id', leagueId);
+
+      if (!includeArchived) {
+        query = query.or('archived.is.null,archived.eq.false');
+      }
+
+      if (seasonId) {
+        query = query.eq('season_context', seasonId);
+      }
+
+      const { data, error } = await query.order('earned_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to get seasonal achievements: ${error.message}`);
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Failed to get seasonal achievements:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get seasonal achievement summary
+   */
+  static async getSeasonalSummary(userId: string, leagueId: string): Promise<{
+    currentSeason: {
+      total: number;
+      earned: number;
+      recentUnlocks: Array<UserAchievement & { achievement: Achievement }>;
+    };
+    previousSeasons: Array<{
+      seasonId: string;
+      total: number;
+      topAchievements: Array<UserAchievement & { achievement: Achievement }>;
+    }>;
+  }> {
+    try {
+      // Get current season achievements
+      const currentSeasonAchievements = await this.getUserSeasonalAchievements(
+        userId, 
+        leagueId, 
+        undefined, 
+        false
+      );
+
+      // Get archived achievements grouped by season
+      const { data: archivedAchievements, error: archivedError } = await supabase
+        .from('user_achievements')
+        .select(`
+          *,
+          achievement:achievements(*)
+        `)
+        .eq('user_id', userId)
+        .eq('league_id', leagueId)
+        .eq('archived', true)
+        .order('archived_at', { ascending: false });
+
+      if (archivedError) {
+        throw new Error(`Failed to get archived achievements: ${archivedError.message}`);
+      }
+
+      // Group archived achievements by season
+      const seasonGroups = (archivedAchievements || []).reduce((acc, achievement) => {
+        const season = achievement.season_context || 'legacy';
+        if (!acc[season]) {
+          acc[season] = [];
+        }
+        acc[season].push(achievement);
+        return acc;
+      }, {} as Record<string, Array<UserAchievement & { achievement: Achievement }>>);
+
+      // Get total available achievements for comparison
+      const { data: allAchievements, error: allError } = await supabase
+        .from('achievements')
+        .select('id');
+
+      const totalAchievements = allAchievements?.length || 0;
+
+      return {
+        currentSeason: {
+          total: totalAchievements,
+          earned: currentSeasonAchievements.length,
+          recentUnlocks: currentSeasonAchievements.slice(0, 5),
+        },
+        previousSeasons: Object.entries(seasonGroups).map(([seasonId, achievements]) => ({
+          seasonId,
+          total: achievements.length,
+          topAchievements: achievements
+            .sort((a, b) => {
+              // Sort by rarity (special > streak > accuracy > milestone > participation)
+              const rarityOrder = { special: 0, streak: 1, accuracy: 2, milestone: 3, participation: 4 };
+              return rarityOrder[a.achievement.category as keyof typeof rarityOrder] - 
+                     rarityOrder[b.achievement.category as keyof typeof rarityOrder];
+            })
+            .slice(0, 3),
+        })),
+      };
+    } catch (error) {
+      console.error('Failed to get seasonal summary:', error);
+      return {
+        currentSeason: { total: 0, earned: 0, recentUnlocks: [] },
+        previousSeasons: [],
+      };
+    }
+  }
+
+  /**
    * Get achievement progress for a user
    */
   static async getAchievementProgress(userId: string, leagueId: string, stats: UserPerformanceStats): Promise<{
@@ -434,7 +597,7 @@ export class AchievementService {
       const userAchievements = await this.getUserAchievements(userId, leagueId);
       const earnedIds = new Set(userAchievements.map(ua => ua.achievement_id));
 
-      const progress = achievements.map(achievement => {
+      const progress = achievements.map((achievement: Achievement) => {
         const earned = earnedIds.has(achievement.id);
         const currentValue = this.getEarnedValue(achievement, stats);
         const progressPercent = Math.min(100, (currentValue / achievement.condition_value) * 100);

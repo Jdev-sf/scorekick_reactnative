@@ -6,11 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  RefreshControl,
 } from 'react-native';
+import { useTheme } from '../../../contexts/ThemeContext';
 import { useMatchesByRound } from '../hooks/useMatches';
 import { MatchCard } from './MatchCard';
-import { usePreciseBottomPadding } from '../../../hooks/useBottomTabBarHeight';
 import type { Match } from '../types';
 
 interface MatchCalendarProps {
@@ -21,17 +20,17 @@ interface MatchCalendarProps {
 }
 
 export function MatchCalendar({ onMatchPress, initialRound = 1, onRefresh, refreshing = false }: MatchCalendarProps) {
+  const { colors } = useTheme();
   const [selectedRound, setSelectedRound] = useState(initialRound);
   
   const { data: matches, isLoading, error } = useMatchesByRound(selectedRound);
-  const contentPadding = usePreciseBottomPadding();
 
   const renderRoundSelector = () => {
     const rounds = Array.from({ length: 38 }, (_, i) => i + 1);
     
     return (
-      <View style={styles.roundSelector}>
-        <Text style={styles.roundSelectorTitle}>Giornata</Text>
+      <View style={[styles.roundSelector, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.roundSelectorTitle, { color: colors.textPrimary }]}>Giornata</Text>
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
@@ -42,13 +41,13 @@ export function MatchCalendar({ onMatchPress, initialRound = 1, onRefresh, refre
               key={round}
               style={[
                 styles.roundButton,
-                selectedRound === round && styles.roundButtonActive,
+                { backgroundColor: selectedRound === round ? colors.primary : colors.surface2 },
               ]}
               onPress={() => setSelectedRound(round)}
             >
               <Text style={[
                 styles.roundButtonText,
-                selectedRound === round && styles.roundButtonTextActive,
+                { color: selectedRound === round ? '#FFFFFF' : colors.textSecondary },
               ]}>
                 {round}
               </Text>
@@ -63,8 +62,8 @@ export function MatchCalendar({ onMatchPress, initialRound = 1, onRefresh, refre
     if (isLoading) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Caricamento partite...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Caricamento partite...</Text>
         </View>
       );
     }
@@ -72,8 +71,8 @@ export function MatchCalendar({ onMatchPress, initialRound = 1, onRefresh, refre
     if (error) {
       return (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Errore nel caricamento delle partite</Text>
-          <Text style={styles.errorSubtext}>
+          <Text style={[styles.errorText, { color: colors.error }]}>Errore nel caricamento delle partite</Text>
+          <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>
             {error instanceof Error ? error.message : 'Errore sconosciuto'}
           </Text>
         </View>
@@ -84,8 +83,8 @@ export function MatchCalendar({ onMatchPress, initialRound = 1, onRefresh, refre
       return (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>⚽</Text>
-          <Text style={styles.emptyTitle}>Nessuna partita</Text>
-          <Text style={styles.emptySubtext}>
+          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Nessuna partita</Text>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
             Non ci sono partite programmate per la giornata {selectedRound}
           </Text>
         </View>
@@ -94,7 +93,7 @@ export function MatchCalendar({ onMatchPress, initialRound = 1, onRefresh, refre
 
     return (
       <View style={styles.matchesList}>
-        <Text style={styles.matchesHeader}>
+        <Text style={[styles.matchesHeader, { color: colors.textPrimary }]}>
           Giornata {selectedRound} • {matches.length} partite
         </Text>
         {matches.map((match) => (
@@ -109,26 +108,11 @@ export function MatchCalendar({ onMatchPress, initialRound = 1, onRefresh, refre
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {renderRoundSelector()}
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={{
-          paddingBottom: contentPadding
-        }}
-        refreshControl={
-          onRefresh ? (
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#3B82F6']}
-              tintColor="#3B82F6"
-            />
-          ) : undefined
-        }
-      >
+      <View style={styles.content}>
         {renderMatches()}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -136,18 +120,14 @@ export function MatchCalendar({ onMatchPress, initialRound = 1, onRefresh, refre
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   roundSelector: {
-    backgroundColor: '#FFFFFF',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   roundSelectorTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 12,
     paddingHorizontal: 16,
   },
@@ -158,21 +138,13 @@ const styles = StyleSheet.create({
   roundButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#F3F4F6',
     borderRadius: 20,
     minWidth: 40,
     alignItems: 'center',
   },
-  roundButtonActive: {
-    backgroundColor: '#3B82F6',
-  },
   roundButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
-  },
-  roundButtonTextActive: {
-    color: '#FFFFFF',
   },
   content: {
     flex: 1,
@@ -186,7 +158,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#6B7280',
   },
   errorContainer: {
     flex: 1,
@@ -198,13 +169,11 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#DC2626',
     textAlign: 'center',
     marginBottom: 8,
   },
   errorSubtext: {
     fontSize: 14,
-    color: '#6B7280',
     textAlign: 'center',
   },
   emptyContainer: {
@@ -221,12 +190,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 16,
-    color: '#6B7280',
     textAlign: 'center',
   },
   matchesList: {
@@ -235,7 +202,6 @@ const styles = StyleSheet.create({
   matchesHeader: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 16,
   },
 });

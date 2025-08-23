@@ -10,7 +10,7 @@ export interface RealtimeSubscriptionConfig {
   filter?: string;
 }
 
-export interface RealtimeCallbacks<T = any> {
+export interface RealtimeCallbacks<T extends { [key: string]: any } = { [key: string]: any }> {
   onInsert?: (payload: RealtimePostgresChangesPayload<T>) => void;
   onUpdate?: (payload: RealtimePostgresChangesPayload<T>) => void;
   onDelete?: (payload: RealtimePostgresChangesPayload<T>) => void;
@@ -38,7 +38,7 @@ export class RealtimeService {
   /**
    * Subscribe to table changes with specific filters
    */
-  static subscribe<T = any>(
+  static subscribe<T extends { [key: string]: any } = { [key: string]: any }>(
     channelName: string,
     config: RealtimeSubscriptionConfig,
     callbacks: RealtimeCallbacks<T>
@@ -53,7 +53,7 @@ export class RealtimeService {
       const channel = supabase
         .channel(channelName)
         .on(
-          'postgres_changes',
+          'postgres_changes' as any,
           {
             event: config.event || '*',
             schema: config.schema || 'public',
@@ -139,9 +139,9 @@ export class RealtimeService {
   /**
    * Subscribe to prediction updates for a specific league
    */
-  static subscribeToPredictionUpdates(
+  static subscribeToPredictionUpdates<T extends { [key: string]: any } = { [key: string]: any }>(
     leagueId: string, 
-    callbacks: RealtimeCallbacks
+    callbacks: RealtimeCallbacks<T>
   ): RealtimeChannel | null {
     return this.subscribe(`predictions-${leagueId}`, {
       table: 'predictions',

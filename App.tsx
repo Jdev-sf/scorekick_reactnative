@@ -2,18 +2,22 @@ import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { AppState } from 'react-native';
+import { AppState, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { queryClient } from './src/lib/react-query/client';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { AuthProvider } from './src/features/auth/AuthProvider';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import { SelectedLeagueProvider } from './src/contexts/SelectedLeagueContext';
 import { ErrorBoundary } from './src/components/common/ErrorBoundary';
 import { BackgroundSyncService } from './src/services/backgroundSync';
 import { RealtimeService } from './src/services/realtimeService';
 import { OfflineSyncService } from './src/services/offlineSyncService';
 import { useNotificationHandler } from './src/hooks/useNotifications';
 
-export default function App() {
+// Component interno che usa il tema
+function AppContent() {
+  const { colors, isDark } = useTheme();
   // Initialize notification handler
   useNotificationHandler();
 
@@ -53,12 +57,24 @@ export default function App() {
   }, []);
 
   return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={colors.background} />
+      <RootNavigator />
+    </View>
+  );
+}
+
+export default function App() {
+  return (
     <ErrorBoundary>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <StatusBar style="auto" />
-            <RootNavigator />
+            <ThemeProvider>
+              <SelectedLeagueProvider>
+                <AppContent />
+              </SelectedLeagueProvider>
+            </ThemeProvider>
           </AuthProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

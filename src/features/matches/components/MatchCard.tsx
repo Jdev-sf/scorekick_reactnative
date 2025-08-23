@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { useTheme } from '../../../contexts/ThemeContext';
 import type { Match } from '../types';
 
 interface MatchCardProps {
@@ -19,6 +20,9 @@ interface MatchCardProps {
 }
 
 export function MatchCard({ match, onPress, showPrediction, userPrediction }: MatchCardProps) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  
   const formatMatchDate = (dateString: string) => {
     const date = new Date(dateString);
     const today = new Date();
@@ -46,12 +50,12 @@ export function MatchCard({ match, onPress, showPrediction, userPrediction }: Ma
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'live':
-        return '#EF4444';
+        return colors.error;
       case 'completed':
-        return '#10B981';
+        return colors.success;
       case 'scheduled':
       default:
-        return '#6B7280';
+        return colors.textSecondary;
     }
   };
 
@@ -105,20 +109,14 @@ export function MatchCard({ match, onPress, showPrediction, userPrediction }: Ma
 
     return (
       <View style={styles.predictionContainer}>
-        <Text style={styles.predictionLabel}>La tua previsione:</Text>
         <Text style={styles.predictionScore}>
-          {userPrediction.home_score_predicted} - {userPrediction.away_score_predicted}
-        </Text>
-        {userPrediction.points_earned !== undefined && (
-          <View style={[
-            styles.pointsBadge,
-            { backgroundColor: getPointsColor(userPrediction.points_earned) }
-          ]}>
-            <Text style={styles.pointsText}>
-              {userPrediction.points_earned} pt{userPrediction.points_earned !== 1 ? 'i' : 'o'}
+          Prev: {userPrediction.home_score_predicted}-{userPrediction.away_score_predicted}
+          {userPrediction.points_earned !== undefined && (
+            <Text style={[styles.pointsText, { color: getPointsColor(userPrediction.points_earned) }]}>
+              {' '}({userPrediction.points_earned}pt)
             </Text>
-          </View>
-        )}
+          )}
+        </Text>
       </View>
     );
   };
@@ -175,26 +173,26 @@ const getPointsColor = (points: number) => {
   return '#DC2626'; // Red for wrong prediction
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   touchable: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   container: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -207,8 +205,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   roundText: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: 11,
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   matchContent: {
@@ -221,55 +219,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   teamName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.textPrimary,
     textAlign: 'center',
   },
   scoreContainer: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 12,
+    backgroundColor: colors.surface2,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginHorizontal: 8,
+    minWidth: 50,
   },
   scoreText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
     textAlign: 'center',
   },
   timeContainer: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 12,
+    borderColor: colors.border,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginHorizontal: 8,
+    minWidth: 50,
   },
   timeText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
-    color: '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   predictionContainer: {
-    marginTop: 12,
-    paddingTop: 12,
+    marginTop: 6,
+    paddingTop: 6,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    flexDirection: 'row',
+    borderTopColor: colors.border,
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
   predictionLabel: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
   },
   predictionScore: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.textSecondary,
+    fontStyle: 'italic',
   },
   pointsBadge: {
     paddingHorizontal: 8,

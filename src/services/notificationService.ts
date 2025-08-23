@@ -167,7 +167,7 @@ export class NotificationService {
           sound: true,
         },
         trigger: notification.scheduleTime 
-          ? { type: 'date', date: notification.scheduleTime }
+          ? { type: 'date' as const, date: notification.scheduleTime }
           : null,
       });
 
