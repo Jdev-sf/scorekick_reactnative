@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -9,8 +9,29 @@ import { useSeasons } from '../../matches/hooks/useSeasons';
 export const SeasonStatusCard: React.FC = () => {
   const { colors } = useTheme();
   const { currentSeason, availableSeasons, refetchSeasons } = useSeasons();
-  
-  const currentSeasonString = SeasonService.getCurrentSeasonString();
+  const [currentSeasonString, setCurrentSeasonString] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load current season string dynamically
+  useEffect(() => {
+    const loadCurrentSeason = async () => {
+      try {
+        setIsLoading(true);
+        const seasonString = await SeasonService.getCurrentSeasonString();
+        setCurrentSeasonString(seasonString);
+      } catch (error) {
+        console.error('Error loading current season:', error);
+        // Fallback to date-based detection
+        const fallback = SeasonService.getCurrentSeasonStringFallback();
+        setCurrentSeasonString(fallback);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCurrentSeason();
+  }, [currentSeason]); // Re-run when currentSeason changes
+
   const isCurrentSeasonActive = currentSeason?.year === currentSeasonString;
 
   const handleSyncData = async () => {
@@ -26,6 +47,9 @@ export const SeasonStatusCard: React.FC = () => {
               try {
                 await EdgeFunctionService.syncAllData();
                 await refetchSeasons();
+                // Refresh current season string after sync
+                const seasonString = await SeasonService.getCurrentSeasonString();
+                setCurrentSeasonString(seasonString);
                 Alert.alert('Successo', 'Dati sincronizzati con successo!');
               } catch (error) {
                 console.error('Sync error:', error);
@@ -114,10 +138,10 @@ export const SeasonStatusCard: React.FC = () => {
       >
         <View>
           <Text style={{ fontSize: 12, color: colors.textTertiary }}>
-            Stagione Corrente (Calcolata)
+            Stagione Corrente (Rilevata)
           </Text>
           <Text style={{ fontSize: 14, fontWeight: '500', color: colors.textPrimary }}>
-            {currentSeasonString}
+            {isLoading ? 'Caricamento...' : currentSeasonString}
           </Text>
         </View>
         <View>

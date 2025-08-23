@@ -35,7 +35,7 @@ export class PredictionService {
 
       // Check if the season is active (only active seasons allow predictions)
       const seasonYear = match.season?.year;
-      if (!seasonYear || !SeasonService.isSeasonActive(seasonYear)) {
+      if (!seasonYear || !(await SeasonService.isSeasonActive(seasonYear))) {
         return { allowed: false, reason: 'Predictions are only allowed for the current season' };
       }
 

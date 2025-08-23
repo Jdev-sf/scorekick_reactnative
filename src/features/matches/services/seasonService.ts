@@ -3,21 +3,73 @@ import type { Season, LeagueParticipation } from '../types';
 
 export class SeasonService {
   /**
-   * Get current season string based on date (e.g., "2025-26")
+   * Get current season string based on actual match data (e.g., "2025-26")
+   * Uses dynamic detection by checking for active matches in possible seasons
    */
-  static getCurrentSeasonString(): string {
+  static async getCurrentSeasonString(): Promise<string> {
+    try {
+      // Try to get the current active season from the database first
+      const activeSeason = await this.getCurrentSeason();
+      if (activeSeason) {
+        return activeSeason.year;
+      }
+
+      // If no active season in DB, check for upcoming matches
+      const now = new Date();
+      const year = now.getFullYear();
+      
+      // Try both possible seasons for current year
+      const possibleSeasons = [
+        `${year}-${(year + 1).toString().slice(-2)}`,    // e.g., 2025-26
+        `${year - 1}-${year.toString().slice(-2)}`       // e.g., 2024-25
+      ];
+      
+      // Check which season has upcoming matches in the next 6 months
+      const sixMonthsFromNow = new Date();
+      sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+      
+      for (const season of possibleSeasons) {
+        const { data: matches } = await supabase
+          .from('matches')
+          .select(`
+            match_date,
+            status,
+            seasons!inner(year)
+          `)
+          .eq('seasons.year', season)
+          .in('status', ['scheduled', 'live'])
+          .gte('match_date', now.toISOString())
+          .lte('match_date', sixMonthsFromNow.toISOString())
+          .limit(5);
+
+        if (matches && matches.length > 0) {
+          console.log(`[SeasonService] Found active season: ${season} with ${matches.length} upcoming matches`);
+          return season;
+        }
+      }
+      
+      // Fallback to date-based logic if no matches found
+      console.log('[SeasonService] No active matches found, falling back to date-based detection');
+      return this.getCurrentSeasonStringFallback();
+      
+    } catch (error) {
+      console.error('[SeasonService] Error in dynamic season detection:', error);
+      // Fallback to simple date-based logic on error
+      return this.getCurrentSeasonStringFallback();
+    }
+  }
+
+  /**
+   * Fallback method for season detection based on calendar dates
+   */
+  static getCurrentSeasonStringFallback(): string {
     const now = new Date();
     const year = now.getFullYear();
     
     // Serie A season starts in August and ends in May/June
-    // If we're in January-July, we're in the second half of the season (e.g., 2024-25)
-    // If we're in August-December, we're in the first half of the new season (e.g., 2025-26)
-    
     if (now.getMonth() < 7) { // January to July (months 0-6)
-      // We're in the second half of the season
       return `${year - 1}-${year.toString().slice(-2)}`;
     } else { // August to December (months 7-11)  
-      // We're in the first half of the new season
       return `${year}-${(year + 1).toString().slice(-2)}`;
     }
   }
@@ -25,8 +77,9 @@ export class SeasonService {
   /**
    * Check if a season is currently active (can make predictions)
    */
-  static isSeasonActive(seasonYear: string): boolean {
-    return seasonYear === this.getCurrentSeasonString();
+  static async isSeasonActive(seasonYear: string): Promise<boolean> {
+    const currentSeason = await this.getCurrentSeasonString();
+    return seasonYear === currentSeason;
   }
 
   /**

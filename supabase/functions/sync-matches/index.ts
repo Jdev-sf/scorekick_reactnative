@@ -148,20 +148,52 @@ serve(async (req) => {
       }
     }
 
-    // Get current season based on date
-    const getCurrentSeason = () => {
+    // Get current season based on actual match data
+    const getCurrentSeason = async () => {
       const now = new Date()
       const year = now.getFullYear()
       
-      // Serie A season starts in August and ends in May/June
-      // If we're in January-July, we're in the second half of the season (e.g., 2024-25)
-      // If we're in August-December, we're in the first half of the new season (e.g., 2025-26)
+      // Try both possible seasons for current year
+      const possibleSeasons = [
+        `${year}-${(year + 1).toString().slice(-2)}`,    // e.g., 2025-26
+        `${year - 1}-${year.toString().slice(-2)}`       // e.g., 2024-25
+      ]
       
-      if (now.getMonth() < 7) { // January to July (months 0-6)
-        // We're in the second half of the season
+      // Check which season has active matches by querying Football Data API
+      for (const season of possibleSeasons) {
+        try {
+          const apiSeason = convertSeasonToApiFormat(season)
+          console.log(`Checking season ${season} (API: ${apiSeason}) for current matches...`)
+          
+          const response = await makeApiRequest(`/competitions/${SERIE_A_COMPETITION_ID}/matches?status=SCHEDULED,LIVE&season=${apiSeason}&limit=5`)
+          const matches = response.matches || []
+          
+          if (matches.length > 0) {
+            // Check if any matches are in the near future (within 6 months)
+            const sixMonthsFromNow = new Date()
+            sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6)
+            
+            const hasUpcomingMatches = matches.some((match: FootballDataMatch) => {
+              const matchDate = new Date(match.utcDate)
+              return matchDate >= now && matchDate <= sixMonthsFromNow
+            })
+            
+            if (hasUpcomingMatches) {
+              console.log(`Found active season: ${season} with ${matches.length} upcoming matches`)
+              return season
+            }
+          }
+        } catch (error) {
+          console.log(`Season ${season} not available or no matches found`)
+          continue
+        }
+      }
+      
+      // Fallback to date-based logic if API check fails
+      console.log('Falling back to date-based season detection...')
+      if (now.getMonth() < 7) { // January to July
         return `${year - 1}-${year.toString().slice(-2)}`
-      } else { // August to December (months 7-11)  
-        // We're in the first half of the new season
+      } else { // August to December  
         return `${year}-${(year + 1).toString().slice(-2)}`
       }
     }
@@ -231,7 +263,7 @@ serve(async (req) => {
 
     // Sync Matches
     try {
-      const currentSeason = getCurrentSeason()
+      const currentSeason = await getCurrentSeason()
       const seasonId = await ensureSeasonExists(currentSeason)
       const apiSeason = convertSeasonToApiFormat(currentSeason)
       
@@ -310,7 +342,7 @@ serve(async (req) => {
 
     // Sync Standings
     try {
-      const currentSeason = getCurrentSeason()
+      const currentSeason = await getCurrentSeason()
       const apiSeason = convertSeasonToApiFormat(currentSeason)
       console.log(`Fetching standings from Football-data.org for season ${currentSeason} (API: ${apiSeason})...`)
       const standingsResponse = await makeApiRequest(`/competitions/${SERIE_A_COMPETITION_ID}/standings?season=${apiSeason}`)
